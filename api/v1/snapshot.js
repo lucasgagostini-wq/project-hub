@@ -21,15 +21,21 @@ async function ensureBucket(base, key, bucket) {
 }
 
 async function uploadHtml(base, key, bucket, path, html) {
+  // Upload multipart (igual ao SDK): o content-type do arquivo vai na PARTE, e é assim
+  // que o Storage define o mimetype do objeto. Upload raw não respeitava o header.
+  const boundary = "----phsnap" + Math.random().toString(36).slice(2);
+  const pre = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${path}"\r\nContent-Type: text/html\r\n\r\n`;
+  const post = `\r\n--${boundary}--\r\n`;
+  const body = Buffer.concat([Buffer.from(pre, "utf-8"), Buffer.from(html, "utf-8"), Buffer.from(post, "utf-8")]);
   const r = await fetch(`${base}/storage/v1/object/${bucket}/${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`, apikey: key,
-      "Content-Type": "text/html",
+      "Content-Type": `multipart/form-data; boundary=${boundary}`,
       "Cache-Control": "max-age=3600",
       "x-upsert": "true", // sobrescreve se re-gerar
     },
-    body: Buffer.from(html, "utf-8"),
+    body,
   });
   if (!r.ok) return { ok: false, detail: (await r.text().catch(() => "")).slice(0, 200) };
   return { ok: true };
