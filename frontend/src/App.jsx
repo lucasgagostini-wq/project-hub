@@ -222,31 +222,6 @@ export default function App() {
       >
         <style>{buildGlobalStyle()}</style>
 
-        {/* ── Alternador de tema (discreto, canto inferior-direito) ── */}
-        <button
-          onClick={toggleTheme}
-          title={themeMode === "dark" ? "Tema claro" : "Tema escuro"}
-          aria-label={themeMode === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
-          style={{
-            position: "fixed",
-            right: 18,
-            bottom: isMobile ? 104 : 22,
-            zIndex: 40,
-            width: 40,
-            height: 40,
-            borderRadius: 999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: T.surface,
-            color: T.muted,
-            border: `1px solid ${T.border}`,
-            boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
-          }}
-        >
-          {themeMode === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
-        </button>
-
         {/* ── Layout chrome ── */}
         {isMobile ? (
           <MobileTopBar
@@ -424,7 +399,7 @@ export default function App() {
         {/* ── Mobile bottom nav ── */}
         {isMobile && <MobileBottomNav secao={secao} onNav={navTo} />}
 
-        {/* ── Viewport preview toggle ── */}
+        {/* ── Controles flutuantes (tema + preview) ── */}
         <div
           style={{
             position: "fixed",
@@ -432,14 +407,38 @@ export default function App() {
             right: 18,
             zIndex: 60,
             display: "flex",
-            gap: 2,
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: 999,
-            padding: 3,
-            boxShadow: "0 6px 20px rgba(0,0,0,.12)",
+            alignItems: "center",
+            gap: 10,
           }}
         >
+          {/* Alternador de tema claro/escuro */}
+          <button
+            onClick={toggleTheme}
+            title={themeMode === "dark" ? "Tema claro" : "Tema escuro"}
+            aria-label={themeMode === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
+            style={{
+              width: 36, height: 36, borderRadius: 999, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: T.surface, color: T.muted,
+              border: `1px solid ${T.border}`,
+              boxShadow: "0 6px 20px rgba(0,0,0,.12)",
+            }}
+          >
+            {themeMode === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+          </button>
+
+          {/* Preview Web/Mobile */}
+          <div
+            style={{
+              display: "flex",
+              gap: 2,
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: 999,
+              padding: 3,
+              boxShadow: "0 6px 20px rgba(0,0,0,.12)",
+            }}
+          >
           {[
             { id: "web",    icon: Monitor,    l: "Web" },
             { id: "mobile", icon: Smartphone, l: "Mobile" },
@@ -462,6 +461,7 @@ export default function App() {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
     </MobileCtx.Provider>
