@@ -25,10 +25,11 @@ async function uploadHtml(base, key, bucket, path, html) {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`, apikey: key,
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "text/html",
+      "Cache-Control": "max-age=3600",
       "x-upsert": "true", // sobrescreve se re-gerar
     },
-    body: html,
+    body: Buffer.from(html, "utf-8"),
   });
   if (!r.ok) return { ok: false, detail: (await r.text().catch(() => "")).slice(0, 200) };
   return { ok: true };
