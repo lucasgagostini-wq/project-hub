@@ -232,19 +232,40 @@ export async function upsertOffer(projectId, patch) {
 // ── Conexões / integrações (Cakto, UTMFy) ───────────────────
 // Guardado no campo jsonb `conexoes` do projeto. Em produção, requer uma
 // coluna `conexoes jsonb` na tabela projects (segue o mesmo molde de `estruturas`).
+//
+// SEGURANÇA: segredos (client_secret, webhook secret, tokens, api keys) NUNCA vão
+// para o banco nem para o navegador — eles vivem só em variáveis de ambiente no
+// servidor. `semSegredos` remove qualquer chave sensível antes de gravar, como
+// salvaguarda mesmo que a UI volte a coletar um segredo por engano.
+const RE_CHAVE_SECRETA = /(secret|token|password|senha|api[_-]?key|access[_-]?key|private[_-]?key|credential)/i;
+
+function semSegredos(valor) {
+  if (Array.isArray(valor)) return valor.map(semSegredos);
+  if (valor && typeof valor === "object") {
+    const limpo = {};
+    for (const [k, v] of Object.entries(valor)) {
+      if (RE_CHAVE_SECRETA.test(k)) continue; // descarta a chave sensível
+      limpo[k] = semSegredos(v);
+    }
+    return limpo;
+  }
+  return valor;
+}
+
 export async function upsertConexoes(projectId, conexoes) {
+  const limpo = semSegredos(conexoes);
   if (isMockMode) {
     mockProjetos = mockProjetos.map((p) =>
-      p.id === projectId ? { ...p, conexoes } : p
+      p.id === projectId ? { ...p, conexoes: limpo } : p
     );
     return mockProjetos.find((p) => p.id === projectId)?.conexoes;
   }
   const { error } = await supabase
     .from("projects")
-    .update({ conexoes })
+    .update({ conexoes: limpo })
     .eq("id", projectId);
   if (error) throw error;
-  return conexoes;
+  return limpo;
 }
 
 // ── Persona ──────────────────────────────────────────────────

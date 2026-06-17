@@ -4,10 +4,16 @@
 // (CORS + o secret não pode ficar no navegador).
 //
 // Guarda as credenciais só em memória (passadas por variável de ambiente),
-// troca por um token OAuth2, agrega os pedidos pagos e expõe o faturamento
-// no MESMO contrato que o backend de produção deve implementar:
+// troca por um token OAuth2, agrega os pedidos pagos DO PROJETO (filtrados pelos
+// produtos informados) e expõe o faturamento no MESMO contrato que o backend de
+// produção deve implementar:
 //
-//     GET /api/v1/projects/:id/metrics  ->  { faturamento, gastoAds, ... }
+//     GET /api/v1/projects/:id/metrics?produtos=a,b,c  ->  { faturamento, gastoAds, ... }
+//
+// Em produção a fonte de verdade do faturamento por projeto é o Supabase
+// (webhook da Cakto -> ingest_cakto_sale -> recompute_project_metrics, escopado
+// por gateway_products). Esta ponte só existe para o ambiente de dev, onde não há
+// webhook/Supabase, e replica o escopo por produto.
 //
 // Rodar (TLS do Windows via --use-system-ca por causa do proxy/antivírus):
 //   CAKTO_CLIENT_ID=... CAKTO_CLIENT_SECRET=... \
@@ -42,10 +48,27 @@ async function getToken() {
   return tokenCache.value;
 }
 
-// ── Agrega faturamento dos pedidos pagos ─────────────────────────────────────
-async function getFaturamentoCakto() {
+// Identificadores possíveis de produto/oferta num pedido da Cakto.
+// Espelha o que o webhook usa para resolver o projeto: product.id, product.short_id
+// e offer.id (ver ingest_cakto_sale / gateway_products no Supabase).
+function idsDoPedido(o) {
+  return [
+    o.product?.id, o.product?.short_id, o.product?.shortId, o.offer?.id,
+    o.product_id, o.productId, o.offer_id, o.offerId,
+  ].filter(Boolean).map(String);
+}
+
+// ── Agrega faturamento dos pedidos pagos DO PROJETO ──────────────────────────
+// `produtos` = identificadores Cakto que pertencem ao projeto. Sem essa lista NÃO
+// somamos nada — evita atribuir o faturamento da conta inteira a um único projeto.
+async function getFaturamentoCakto(produtos = []) {
+  const filtro = new Set(produtos.map(String));
+  if (filtro.size === 0) {
+    return { faturamento: null, escopo: "sem-produtos", pedidosPagos: 0, pedidosTotalConta: 0, porStatus: {} };
+  }
+
   const token = await getToken();
-  let page = 1, total = 0;
+  let page = 1, totalConta = 0;
   const porStatus = {};
   let bruto = 0, pagos = 0;
 
@@ -55,16 +78,24 @@ async function getFaturamentoCakto() {
     });
     if (!r.ok) throw new Error(`orders ${r.status}: ${await r.text()}`);
     const d = await r.json();
-    total = d.count ?? total;
+    totalConta = d.count ?? totalConta;
     const rows = d.results || [];
     for (const o of rows) {
+      if (!idsDoPedido(o).some((id) => filtro.has(id))) continue; // não é deste projeto
       porStatus[o.status] = (porStatus[o.status] || 0) + 1;
       if (o.status === "paid") { pagos++; bruto += Number(o.amount || 0); }
     }
     if (!d.next || rows.length === 0) break;
     page++;
   }
-  return { faturamento: Math.round(bruto * 100) / 100, pedidosPagos: pagos, pedidosTotal: total, porStatus };
+  return {
+    faturamento: Math.round(bruto * 100) / 100,
+    escopo: "produtos",
+    produtos: [...filtro],
+    pedidosPagos: pagos,
+    pedidosTotalConta: totalConta,
+    porStatus,
+  };
 }
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
@@ -162,16 +193,19 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/v1/projects/:id/metrics
+  // GET /api/v1/projects/:id/metrics?produtos=a,b,c
   const m = url.pathname.match(/^\/api\/v1\/projects\/([^/]+)\/metrics\/?$/);
   if (m && req.method === "GET") {
     try {
-      const cakto = await getFaturamentoCakto();
+      const produtos = (url.searchParams.get("produtos") || "")
+        .split(",").map((s) => s.trim()).filter(Boolean);
+      const cakto = await getFaturamentoCakto(produtos);
       return json(res, 200, {
         projectId: m[1],
-        faturamento: cakto.faturamento,   // real, da Cakto
+        faturamento: cakto.faturamento,   // real, da Cakto, escopado pelos produtos do projeto
         gastoAds: null,                   // ainda não integrado (vem do Meta/Google Ads)
         fonte: { faturamento: "cakto", gastoAds: null },
+        escopo: cakto.escopo,             // "produtos" | "sem-produtos"
         cakto,
         sincronizadoEm: new Date().toISOString(),
       });

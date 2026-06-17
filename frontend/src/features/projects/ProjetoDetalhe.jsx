@@ -18,7 +18,6 @@ import {
   IconCreditCard as CreditCard,
   IconChartBar as ChartBar,
   IconCopy as Copy,
-  IconEyeOff as EyeOff,
   IconPlugConnected as PlugConnected,
   IconCircleCheck as CircleCheck,
   IconExternalLink as ExternalLink,
@@ -596,7 +595,7 @@ function ResumoIntegracoes({ projeto, onSyncMetricas, onEditarGasto }) {
       if (r.gastoAds != null) patch.gastoAds = r.gastoAds;
       if (r.lucro != null) patch.lucro = r.lucro;
       onSyncMetricas?.(patch);
-      setMeta({ em: r.sincronizadoEm, real: r.faturamento != null });
+      setMeta({ em: r.sincronizadoEm, real: r.faturamento != null, escopo: r.escopo });
     } catch (e) {
       setErro(e.message || "Erro ao sincronizar.");
     } finally {
@@ -721,6 +720,11 @@ function ResumoIntegracoes({ projeto, onSyncMetricas, onEditarGasto }) {
         {meta?.real && (
           <span style={{ color: T.pos, background: T.posBg, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
             faturamento real (Cakto)
+          </span>
+        )}
+        {meta?.escopo === "sem-produtos" && (
+          <span style={{ color: T.warn, background: T.warnBg, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
+            mapeie os produtos da Cakto na aba Conexões para separar o faturamento deste projeto
           </span>
         )}
         {erro && <span style={{ color: T.neg }}>{erro}</span>}
@@ -848,6 +852,9 @@ function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir, onS
 // ─────────────────────────────────────────────────────────────────────────────
 // Aba Conexões — integrações de API (Cakto, UTMFy)
 // ─────────────────────────────────────────────────────────────────────────────
+// IMPORTANTE: nenhum segredo é coletado nem guardado aqui. Os secrets (client_secret,
+// webhook secret, tokens) vivem só no servidor, em variáveis de ambiente. Esta aba só
+// liga a integração e guarda config não-sensível (ex.: quais produtos são deste projeto).
 const PROVEDORES = [
   {
     key: "cakto",
@@ -857,56 +864,42 @@ const PROVEDORES = [
     icon: CreditCard,
     cor: "#0EA56A",
     site: "https://cakto.com.br",
-    obrigatorios: ["clientId", "clientSecret"],
+    obrigatorios: [],
     campos: [
-      { k: "clientId", label: "Client ID", placeholder: "client_id da Cakto" },
-      { k: "clientSecret", label: "Client Secret", secret: true, placeholder: "client_secret (mostrado só na criação)",
-        hint: "OAuth2: o par client_id + client_secret é trocado por um access_token." },
-      { k: "webhookSecret", label: "Webhook Secret", secret: true, placeholder: "defina um segredo forte",
-        hint: "Use o mesmo valor em CAKTO_WEBHOOK_SECRET no servidor e no painel da Cakto." },
+      { k: "produtos", label: "Produtos da Cakto (IDs)", placeholder: "ex.: prod_123, abc12, offer_789 — separados por vírgula",
+        hint: "É o que separa o faturamento por projeto. Aceita product.id, product.short_id ou offer.id. Em produção o mesmo vínculo vem da tabela gateway_products (preenchida pelo webhook)." },
     ],
     webhookPath: "/api/cakto-webhook",
+    notaServidor: "As credenciais (CAKTO_CLIENT_ID, CAKTO_CLIENT_SECRET e CAKTO_WEBHOOK_SECRET) ficam só no servidor, em variáveis de ambiente — nunca são digitadas nem guardadas aqui.",
   },
   {
     key: "utmfy",
     nome: "UTMFy",
     tipo: "Métricas de anúncios",
-    desc: "Traz gasto, ROAS, vendas e campanhas do gerenciador de anúncios.",
+    desc: "Recebe as vendas da Cakto. O gasto de anúncios é informado manualmente.",
     icon: ChartBar,
     cor: "#7C5CFF",
     site: "https://utmify.com.br",
-    obrigatorios: ["token"],
-    campos: [
-      { k: "base", label: "API Base", placeholder: "https://api.utmify.com.br" },
-      { k: "token", label: "API Token", secret: true, placeholder: "utmfy_..." },
-    ],
+    obrigatorios: [],
+    campos: [],
+    notaServidor: "O token do UTMfy (UTMFY_API_TOKEN) fica só no servidor. O UTMfy não expõe API pública de leitura de gasto — por isso o gasto é informado manualmente na aba Desempenho.",
   },
 ];
 
-function CampoSecreto({ campo, valor, onChange }) {
-  const [show, setShow] = useState(false);
-  const isSecret = campo.secret;
+// Campo de configuração NÃO-sensível (ex.: lista de produtos). Segredos não passam por aqui.
+function CampoConfig({ campo, valor, onChange }) {
   return (
     <div>
       <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 6 }}>{campo.label}</div>
-      <div style={{ position: "relative" }}>
-        <input
-          type={isSecret && !show ? "password" : "text"}
-          value={valor || ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={campo.placeholder}
-          style={{ width: "100%", padding: isSecret ? "10px 38px 10px 12px" : "10px 12px", borderRadius: 10,
-            border: `1px solid ${T.border}`, fontSize: 13, fontFamily: fontBody, outline: "none",
-            background: T.surfaceAlt, color: T.ink }}
-        />
-        {isSecret && (
-          <button type="button" onClick={() => setShow((s) => !s)} title={show ? "Ocultar" : "Mostrar"}
-            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", border: "none",
-              background: "transparent", color: T.faint, display: "flex", padding: 6 }}>
-            {show ? <EyeOff size={15} /> : <Eye size={15} />}
-          </button>
-        )}
-      </div>
+      <input
+        type="text"
+        value={valor || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={campo.placeholder}
+        style={{ width: "100%", padding: "10px 12px", borderRadius: 10,
+          border: `1px solid ${T.border}`, fontSize: 13, fontFamily: fontBody, outline: "none",
+          background: T.surfaceAlt, color: T.ink }}
+      />
       {campo.hint && <div style={{ fontSize: 11.5, color: T.faint, marginTop: 5, lineHeight: 1.4 }}>{campo.hint}</div>}
     </div>
   );
@@ -959,11 +952,21 @@ function IntegracaoCard({ prov, valores, onConectar, onDesconectar }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-        {prov.campos.map((c) => (
-          <CampoSecreto key={c.k} campo={c} valor={draft[c.k]} onChange={(v) => set(c.k, v)} />
-        ))}
-      </div>
+      {prov.campos.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+          {prov.campos.map((c) => (
+            <CampoConfig key={c.k} campo={c} valor={draft[c.k]} onChange={(v) => set(c.k, v)} />
+          ))}
+        </div>
+      )}
+
+      {prov.notaServidor && (
+        <div style={{ display: "flex", gap: 9, alignItems: "flex-start", marginTop: prov.campos.length > 0 ? 14 : 0,
+          background: T.hair, borderRadius: 10, padding: "10px 12px" }}>
+          <span style={{ fontSize: 14, lineHeight: 1.2, flexShrink: 0 }}>🔒</span>
+          <p style={{ fontSize: 11.5, color: T.muted, margin: 0, lineHeight: 1.45 }}>{prov.notaServidor}</p>
+        </div>
+      )}
 
       {webhookUrl && (
         <div style={{ marginTop: 16 }}>
@@ -1029,8 +1032,9 @@ function ConexoesTab({ projeto, onSalvar }) {
         border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 16px" }}>
         <PlugConnected size={18} color={T.primary} style={{ flexShrink: 0, marginTop: 1 }} />
         <p style={{ fontSize: 12.5, color: T.muted, margin: 0, lineHeight: 1.5 }}>
-          Conecte as APIs deste projeto. As credenciais ficam salvas no projeto; a sincronização real de
-          métricas e vendas roda no servidor (requer as variáveis de ambiente configuradas no backend).
+          Conecte as APIs deste projeto. Os segredos (client secret, webhook secret, tokens) ficam só no
+          servidor, em variáveis de ambiente — aqui você apenas liga a integração e mapeia os produtos.
+          Em produção, o faturamento por projeto é calculado no Supabase a partir do webhook da Cakto.
         </p>
       </div>
 
