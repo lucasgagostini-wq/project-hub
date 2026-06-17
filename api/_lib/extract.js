@@ -59,10 +59,9 @@ function parseJsonLoose(s) {
   return null;
 }
 
-// 2) OpenRouter — chat completion com 1 retry curto em 429. Timeout por chamada ~12s.
-async function callOpenRouter(text) {
+// 2) OpenRouter — chat completion num modelo específico, com 1 retry curto em 429.
+async function callModel(model, text) {
   const KEY = process.env.OPENROUTER_API_KEY;
-  const MODEL = process.env.OPENROUTER_MODEL || "nex-agi/nex-n2-pro:free";
   if (!KEY) return null;
 
   const sys = `Você extrai dados de páginas de vendas para um cockpit de gestão de ofertas.
@@ -75,7 +74,7 @@ Regras: campo desconhecido = string vazia "". "oferta" = descrição curta do qu
 do público (ex: "Juliana, 38 anos"). "nicho" deve ser EXATAMENTE um destes: ${NICHOS.join(", ")}.`;
 
   const body = {
-    model: MODEL,
+    model,
     messages: [
       { role: "system", content: sys },
       { role: "user", content: "Conteúdo da página de vendas:\n\n" + text },
@@ -136,7 +135,14 @@ async function extractOfferFromUrl(pageUrl) {
   const work = (async () => {
     const text = await fetchPageText(pageUrl);
     if (!text || text.length < 50) return {};
-    return normalize(parseJsonLoose(await callOpenRouter(text)));
+    // Primário (melhor qualidade) com fallback (mais confiável). Ambos modelos rápidos :free.
+    const primary = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free";
+    const fallback = process.env.OPENROUTER_MODEL_FALLBACK || "nvidia/nemotron-nano-12b-v2-vl:free";
+    let parsed = parseJsonLoose(await callModel(primary, text));
+    if (!parsed && fallback && fallback !== primary) {
+      parsed = parseJsonLoose(await callModel(fallback, text));
+    }
+    return normalize(parsed);
   })().catch(() => ({}));
   const guard = new Promise((resolve) => setTimeout(() => resolve({}), 40000));
   return Promise.race([work, guard]);
