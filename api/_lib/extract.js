@@ -92,7 +92,7 @@ do público (ex: "Juliana, 38 anos"). "nicho" deve ser EXATAMENTE um destes: ${N
         headers: {
           Authorization: `Bearer ${KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://project-hub-iota-gold.vercel.app",
+          "HTTP-Referer": "https://project-hub-fmidia.vercel.app",
           "X-Title": "Project Hub",
         },
         body: JSON.stringify(body),
