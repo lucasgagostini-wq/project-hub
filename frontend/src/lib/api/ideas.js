@@ -36,6 +36,7 @@ export async function createIdea(idea) {
       niche: idea.nicho || null,
       description: idea.descricao || null,
       status: idea.status || "ideia",
+      created_by: idea.created_by || null,
     })
     .select()
     .single();

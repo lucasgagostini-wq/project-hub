@@ -13,11 +13,11 @@ import {
   MOCK_USERS, MOCK_PROJETOS, MOCK_ATIVIDADE, MOCK_TAREFAS,
   MOCK_REUNIOES, MOCK_NAO_ATRIBUIDOS,
 } from "./lib/api/mockData";
-import { signIn, signOut, getProfile, listUsers } from "./lib/api/auth";
-import { listProjects, updateProject, upsertOffer, upsertPersona, upsertConexoes } from "./lib/api/projects";
-import { listTasks, updateTask } from "./lib/api/tasks";
+import { signOut, listUsers, getActor, setActor } from "./lib/api/auth";
+import { listProjects, createProject, updateProject, upsertOffer, upsertPersona, upsertConexoes } from "./lib/api/projects";
+import { listTasks, createTask, updateTask } from "./lib/api/tasks";
 import { listMeetings } from "./lib/api/meetings";
-import { logActivity } from "./lib/api/activity";
+import { logActivity, listActivity } from "./lib/api/activity";
 import { listIdeas, createIdea, updateIdea, deleteIdea } from "./lib/api/ideas";
 
 import Login             from "./features/auth/Login";
@@ -98,28 +98,26 @@ export default function App() {
   const [previewMode, setPreviewMode] = useState("web");
   const isMobile = previewMode === "mobile" ? true : previewMode === "web" ? false : autoMobile;
 
-  // ── Supabase session restore ─────────────────────────────────────────
+  // ── Boot do modo "time" (sem login): carrega os perfis e restaura o ator ──
   useEffect(() => {
-    if (isMockMode) return;
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) await handleSession(session.user);
-      setAuthLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        await handleSession(session.user);
-      } else if (event === "SIGNED_OUT") {
-        setLogado(false);
-        setUsuarioAtual(null);
-        setProjetos([]);
-        setTarefas([]);
-        setReunioes([]);
+    if (isMockMode) { setAuthLoading(false); return; }
+    (async () => {
+      try {
+        const users = await listUsers();
+        setUsuarios(users);
+        const actor = getActor();
+        if (actor) {
+          setUsuarioAtual(users.find((u) => u.id === actor.id) || actor);
+          await carregarDados();
+          setLogado(true);
+        }
+      } catch (e) {
+        console.error("[App] boot:", e);
+      } finally {
+        setAuthLoading(false);
       }
-    });
-
-    return () => subscription.unsubscribe();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Persistência local (modo mock) ───────────────────────────────────
@@ -127,26 +125,16 @@ export default function App() {
   useEffect(() => { if (isMockMode) saveLocal("ph_atividade", atividade); }, [atividade]);
   useEffect(() => { if (isMockMode) saveLocal("ph_ideias", ideias); }, [ideias]);
 
-  async function handleSession(authUser) {
-    try {
-      const [profile, allUsers, projs, tasks, meetings, ideas] = await Promise.all([
-        getProfile(authUser.id),
-        listUsers(),
-        listProjects(),
-        listTasks(),
-        listMeetings(),
-        listIdeas(),
-      ]);
-      setUsuarioAtual(profile);
-      setUsuarios(allUsers);
-      setProjetos(projs);
-      setTarefas(tasks);
-      setReunioes(meetings);
-      setIdeias(ideas);
-      setLogado(true);
-    } catch (err) {
-      console.error("[App] handleSession error:", err);
-    }
+  // Carrega os dados COMPARTILHADOS (Supabase). Atividade vem do audit_log.
+  async function carregarDados() {
+    const [projs, tasks, meetings, ideas, ativ] = await Promise.all([
+      listProjects(), listTasks(), listMeetings(), listIdeas(), listActivity(),
+    ]);
+    setProjetos(projs);
+    setTarefas(tasks);
+    setReunioes(meetings);
+    setIdeias(ideas);
+    setAtividade(ativ);
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────
@@ -175,7 +163,7 @@ export default function App() {
       return;
     }
     try {
-      const nova = await createIdea(dados);
+      const nova = await createIdea({ ...dados, created_by: usuarioAtual?.id });
       setIdeias((xs) => [nova, ...xs]);
     } catch (e) { console.error("[ideias] criar:", e); }
   };
@@ -188,6 +176,30 @@ export default function App() {
     if (!isMockMode) await deleteIdea(id).catch((e) => console.error("[ideias] remover:", e));
   };
 
+  // ── Tarefas (criar/delegar + concluir) ──────────────────────────────────
+  const criarTarefa = async (payload) => {
+    const base = { ...payload, created_by: usuarioAtual?.id };
+    if (isMockMode) {
+      setTarefas((ts) => [{ id: "t" + Date.now(), feito: false, delegadoPor: usuarioAtual?.id, ...base }, ...ts]);
+    } else {
+      try {
+        const nova = await createTask(base);
+        setTarefas((ts) => [nova, ...ts]);
+      } catch (e) { console.error("[tarefas] criar:", e); return; }
+    }
+    const alvo = usuarios.find((u) => u.id === payload.resp);
+    const nomeAlvo = alvo?.nome || alvo?.name;
+    const acao = payload.resp && payload.resp !== usuarioAtual?.id
+      ? `delegou a tarefa "${payload.titulo}" para ${nomeAlvo || "alguém"}`
+      : `criou a tarefa "${payload.titulo}"`;
+    await registrar(payload.proj || null, acao);
+  };
+
+  const toggleTarefa = async (id, feito) => {
+    setTarefas((ts) => ts.map((t) => (t.id === id ? { ...t, feito } : t)));
+    if (!isMockMode) await updateTask(id, { feito }).catch((e) => console.error("[tarefas] concluir:", e));
+  };
+
   const handleSair = async () => {
     await signOut().catch(() => {});
     setLogado(false);
@@ -195,14 +207,22 @@ export default function App() {
   };
 
   // ── Login handler ────────────────────────────────────────────────────
-  const handleEntrar = async (userOrProfile, email, senha) => {
+  const handleEntrar = async (perfil) => {
     if (isMockMode) {
-      setUsuarioAtual(userOrProfile);
+      setUsuarioAtual(perfil);
       setLogado(true);
       return;
     }
-    const { user } = await signIn(email, senha);
-    await handleSession(user);
+    setActor(perfil);
+    setUsuarioAtual(perfil);
+    try { await carregarDados(); } catch (e) { console.error("[App] entrar:", e); }
+    setLogado(true);
+  };
+
+  // Troca de perfil (sem deslogar): muda o ator das próximas ações. Dados são compartilhados.
+  const trocarPerfil = (perfil) => {
+    if (!isMockMode) setActor(perfil);
+    setUsuarioAtual(perfil);
   };
 
   // ── Loading screen ───────────────────────────────────────────────────
@@ -254,7 +274,7 @@ export default function App() {
           <MobileTopBar
             usuario={usuarioAtual}
             usuarios={usuarios}
-            onTrocar={setUsuarioAtual}
+            onTrocar={trocarPerfil}
             onSair={handleSair}
           />
         ) : (
@@ -263,7 +283,7 @@ export default function App() {
             onNav={navTo}
             usuario={usuarioAtual}
             usuarios={usuarios}
-            onTrocar={setUsuarioAtual}
+            onTrocar={trocarPerfil}
             onSair={handleSair}
           />
         )}
@@ -397,9 +417,13 @@ export default function App() {
               {secao === "tarefas" && (
                 <TarefasGerais
                   tarefas={tarefas}
-                  setTarefas={setTarefas}
+                  usuarios={usuarios}
+                  usuarioAtual={usuarioAtual}
+                  projetos={projetos}
                   userById={userById}
                   projById={projById}
+                  onCriar={criarTarefa}
+                  onToggle={toggleTarefa}
                 />
               )}
               {secao === "reunioes" && (
@@ -434,14 +458,16 @@ export default function App() {
                 inicial={novoInicial}
                 onVoltar={() => { setNovoOpen(false); setNovoInicial(null); }}
                 onCriar={async (p) => {
-                  setProjetos((ps) => [...ps, p]);
-                  setAtividade((a) => [
-                    { id: "a" + Date.now(), proj: p.id, user: usuarioAtual?.id, acao: "criou o projeto", quando: "Agora mesmo" },
-                    ...a,
-                  ]);
+                  let projeto = p;
+                  if (!isMockMode) {
+                    try { projeto = await createProject(p); }
+                    catch (e) { console.error("[App] criar projeto:", e); }
+                  }
+                  setProjetos((ps) => [...ps, projeto]);
                   setNovoOpen(false);
                   setNovoInicial(null);
-                  abrirProjeto(p.id);
+                  await registrar(projeto.id, "criou o projeto");
+                  abrirProjeto(projeto.id);
                 }}
               />
             </div>

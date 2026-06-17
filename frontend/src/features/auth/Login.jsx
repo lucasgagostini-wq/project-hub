@@ -8,6 +8,8 @@ import { MOCK_USERS } from "../../lib/api/mockData";
 function ProfileButton({ user, onClick }) {
   const [hover, setHover] = useState(false);
   const nome = (user.nome || user.name || "").split(" ")[0];
+  const cor = user.cor || user.color || T.primary;
+  const papel = user.papel || user.role;
   return (
     <button
       onClick={onClick}
@@ -15,28 +17,30 @@ function ProfileButton({ user, onClick }) {
       onMouseLeave={() => setHover(false)}
       aria-label={`Entrar como ${nome}`}
       style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
         border: "none", background: "transparent", padding: 8, cursor: "pointer",
-        transform: hover ? "translateY(-2px)" : "none", transition: "transform .15s ease",
+        transform: hover ? "translateY(-3px)" : "none", transition: "transform .15s ease",
       }}
     >
       <div style={{
         borderRadius: 24, padding: 4,
-        border: `3px solid ${hover ? T.primary : "transparent"}`,
-        transition: "border-color .15s ease",
+        border: `3px solid ${hover ? cor : T.border}`,
+        boxShadow: hover ? `0 8px 28px ${cor}44` : "none",
+        transition: "border-color .15s ease, box-shadow .15s ease",
       }}>
         <Avatar user={user} size={96} />
       </div>
-      <span style={{ fontSize: 15, fontWeight: 500, color: hover ? T.ink : T.muted, transition: "color .15s ease" }}>
+      <span style={{ fontSize: 15, fontWeight: 600, color: hover ? T.ink : T.muted, transition: "color .15s ease" }}>
         {nome}
       </span>
+      {papel && <span style={{ fontSize: 11.5, color: T.faint, marginTop: -4 }}>{papel}</span>}
     </button>
   );
 }
 
 export default function Login({ onEntrar, usuarios = MOCK_USERS }) {
-  // Protótipo: sem login/senha. Por enquanto, um perfil só.
-  const perfis = (usuarios || []).slice(0, 1);
+  // Sem login/senha: clicou no perfil, entra (estilo Netflix). Mostra todos os perfis.
+  const perfis = usuarios || [];
 
   return (
     <div className="grid-bg" style={{
