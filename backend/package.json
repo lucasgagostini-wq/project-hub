@@ -1,5 +1,5 @@
 {
-  "name": "gestao-ofertas-api",
+  "name": "project-hub-api",
   "version": "0.1.0",
   "private": true,
   "description": "API de gestão de projetos e ofertas — esqueleto para handoff. Endpoints stubbed (501).",
