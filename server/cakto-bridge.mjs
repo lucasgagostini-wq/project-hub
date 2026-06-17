@@ -20,6 +20,9 @@
 //   NODE_OPTIONS=--use-system-ca node server/cakto-bridge.mjs
 // ─────────────────────────────────────────────────────────────────────────────
 import http from "node:http";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const { extractOfferFromUrl } = require("../api/_lib/extract.js");
 
 const PORT = Number(process.env.BRIDGE_PORT || 4000);
 const BASE = process.env.CAKTO_API_BASE || "https://api.cakto.com.br";
@@ -130,6 +133,8 @@ const server = http.createServer(async (req, res) => {
       try {
         const { url: pageUrl, nome } = JSON.parse(body || "{}");
         if (!pageUrl) return json(res, 400, { error: "URL_REQUIRED", detail: "Informe a URL da página de vendas." });
+        // extração (IA) em paralelo com a clonagem no Tynk — best-effort
+        const extractP = extractOfferFromUrl(pageUrl);
         const H = {
           "Content-Type": "application/json",
           Accept: "application/json",
@@ -177,9 +182,17 @@ const server = http.createServer(async (req, res) => {
           clonadoEm: new Date().toISOString(),
         };
 
-        // resposta normalizada para o frontend (contrato de clone.js)
+        // junta a extração da IA (best-effort) e responde no contrato de clone.js
+        const ex = await extractP.catch(() => ({}));
         return json(res, 200, {
-          nome: tynk.title,
+          nome: ex.nome || tynk.title,
+          nicho: ex.nicho || "",
+          oferta: ex.oferta || "",
+          publico: ex.publico || "",
+          idade: ex.idade || "",
+          preco: ex.preco || "",
+          garantia: ex.garantia || "",
+          ...(ex.persona ? { persona: ex.persona } : {}),
           tynk,
           links: [
             { tipo: "Página de vendas (original)", url: pageUrl },
