@@ -11,8 +11,9 @@
 //
 // Best-effort: nunca lança; em falha grave devolve { ok:false }.
 
-const ASSET_BUDGET_BYTES = 6 * 1024 * 1024; // teto total de imagens inline (~6MB)
-const MAX_IMAGES = 60;                       // teto de quantidade de imagens inline
+// Tetos pensados p/ manter o HTML final < ~4MB (limite de resposta da função de preview).
+const ASSET_BUDGET_BYTES = 2.5 * 1024 * 1024; // teto total de imagens inline (~2.5MB)
+const MAX_IMAGES = 35;                          // teto de quantidade de imagens inline
 const HTML_TIMEOUT = 30000;
 const ASSET_TIMEOUT = 8000;
 

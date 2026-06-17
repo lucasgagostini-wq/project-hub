@@ -71,11 +71,13 @@ module.exports = async (req, res) => {
   if (!up.ok) return res.status(502).json({ error: "UPLOAD_FAILED", detail: up.detail });
 
   // 3) devolve as URLs
+  // preview via nosso proxy (força text/html p/ RENDERIZAR); download direto do Storage.
   const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
   return res.status(200).json({
     ok: true,
-    previewUrl: publicUrl,
+    previewUrl: `/api/v1/preview?id=${safeId}`,
     downloadUrl: `${publicUrl}?download=oferta-${safeId}.html`,
+    storageUrl: publicUrl,
     meta: snap.meta,
   });
 };
