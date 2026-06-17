@@ -5,10 +5,12 @@ import {
   IconX as X,
   IconCopy as Copy,
   IconWand as Wand,
+  IconEye as Eye,
+  IconDownload as Download,
 } from "@tabler/icons-react";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Eyebrow } from "../../components";
-import { clonarOferta } from "../../lib/api/clone";
+import { clonarOferta, gerarSnapshot } from "../../lib/api/clone";
 
 const inputSt = {
   width: "100%",
@@ -66,12 +68,30 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
   const [cloneMsg, setCloneMsg] = useState(null); // { tipo: "ok" | "erro", texto }
   const [cloneTynk, setCloneTynk] = useState(null); // metadata retornada pelo Tynk
 
+  // ── Snapshot (preview sem login Tynk + download) ────────────────────
+  const [snapping, setSnapping] = useState(false);
+  const [snap, setSnap] = useState(null); // { previewUrl, downloadUrl }
+  const [snapErr, setSnapErr] = useState(null);
+
+  const gerarPreview = async () => {
+    if (snapping || !cloneUrl.trim()) return;
+    setSnapping(true); setSnapErr(null);
+    try {
+      const r = await gerarSnapshot({ url: cloneUrl.trim() });
+      setSnap({ previewUrl: r.previewUrl, downloadUrl: r.downloadUrl });
+    } catch (e) {
+      setSnapErr(e.message || "Não foi possível gerar o preview.");
+    } finally {
+      setSnapping(false);
+    }
+  };
+
   const set = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const clonar = async () => {
     if (cloning) return;
     if (!cloneUrl.trim()) { setCloneMsg({ tipo: "erro", texto: "Cole a URL da página de vendas." }); return; }
-    setCloning(true); setCloneMsg(null);
+    setCloning(true); setCloneMsg(null); setSnap(null); setSnapErr(null);
     try {
       const d = await clonarOferta({ url: cloneUrl.trim(), nome: form.nome });
       setForm((f) => ({
@@ -197,6 +217,37 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
               color: cloneMsg.tipo === "ok" ? T.pos : T.neg,
               background: cloneMsg.tipo === "ok" ? T.posBg : T.negBg }}>
               {cloneMsg.texto}
+            </div>
+          )}
+
+          {/* Preview/Download da página (snapshot fiel, sem precisar logar no Tynk) */}
+          {cloneMsg?.tipo === "ok" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                {!snap ? (
+                  <button onClick={gerarPreview} disabled={snapping}
+                    style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 9,
+                      border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600,
+                      cursor: snapping ? "wait" : "pointer" }}>
+                    <Eye size={14} /> {snapping ? "Gerando preview…" : "Gerar preview da página"}
+                  </button>
+                ) : (
+                  <>
+                    <a href={snap.previewUrl} target="_blank" rel="noreferrer"
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none",
+                        background: T.primary, color: "#fff", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>
+                      <Eye size={14} /> Ver preview
+                    </a>
+                    <a href={snap.downloadUrl}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9,
+                        border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>
+                      <Download size={14} /> Baixar .html
+                    </a>
+                  </>
+                )}
+              </div>
+              {snapping && <div style={{ fontSize: 11.5, color: T.faint }}>Capturando a página (CSS + imagens)… pode levar alguns segundos.</div>}
+              {snapErr && <div style={{ fontSize: 12, color: T.neg }}>{snapErr}</div>}
             </div>
           )}
         </section>

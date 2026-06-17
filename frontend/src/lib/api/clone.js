@@ -28,3 +28,19 @@ export async function clonarOferta({ url, nome }) {
   }
   return res.json();
 }
+
+// Gera um snapshot fiel da página (CSS/imagens inline) e hospeda no Storage.
+// Retorna { previewUrl, downloadUrl, meta } — preview abre sem login no Tynk.
+export async function gerarSnapshot({ url, projectId }) {
+  const res = await fetch(`${API_BASE}/api/v1/snapshot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, projectId }),
+  });
+  if (!res.ok) {
+    let detalhe = "";
+    try { detalhe = (await res.json()).detail || ""; } catch { detalhe = await res.text().catch(() => ""); }
+    throw new Error(detalhe || `Snapshot falhou (${res.status})`);
+  }
+  return res.json();
+}
