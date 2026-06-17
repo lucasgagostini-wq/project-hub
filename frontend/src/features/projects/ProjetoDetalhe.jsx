@@ -15,6 +15,14 @@ import {
   IconUsers as Users2,
   IconActivity as Activity,
   IconPlus as Plus,
+  IconCreditCard as CreditCard,
+  IconChartBar as ChartBar,
+  IconCopy as Copy,
+  IconEyeOff as EyeOff,
+  IconPlugConnected as PlugConnected,
+  IconCircleCheck as CircleCheck,
+  IconExternalLink as ExternalLink,
+  IconRefresh as Refresh,
 } from "@tabler/icons-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -27,6 +35,7 @@ import {
 import { useMobile } from "../../lib/context";
 import { gerarTimeline } from "../../lib/utils";
 import { MOCK_ESTRUTURAS } from "../../lib/api/mockData";
+import { sincronizarMetricas } from "../../lib/api/metrics";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prévia da oferta (modal)
@@ -124,6 +133,61 @@ function PreviaOferta({ projeto, est, onFechar }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Card de informações da clonagem (Tynk)
+// ─────────────────────────────────────────────────────────────────────────────
+function TynkInfoCard({ tynk }) {
+  const fmtData = (s) =>
+    s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
+  const status = tynk.isPublished
+    ? { l: "Publicada", c: T.pos, bg: T.posBg }
+    : { l: "Rascunho", c: T.muted, bg: T.hair };
+
+  const Linha = ({ label, valor }) =>
+    valor ? (
+      <div style={{ display: "flex", gap: 12, padding: "5px 0", borderTop: `1px solid ${T.hair}` }}>
+        <div style={{ width: 130, flexShrink: 0, fontSize: 12, color: T.muted }}>{label}</div>
+        <div style={{ fontSize: 13, wordBreak: "break-all", lineHeight: 1.4 }}>{valor}</div>
+      </div>
+    ) : null;
+
+  const Btn = ({ href, children }) =>
+    href ? (
+      <a href={href} target="_blank" rel="noreferrer"
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600,
+          color: T.primaryText, border: `1px solid ${T.border}`, background: T.surface, borderRadius: 9, padding: "7px 12px", textDecoration: "none" }}>
+        <ExternalLink size={13} /> {children}
+      </a>
+    ) : null;
+
+  return (
+    <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Copy size={15} color="#fff" />
+        </div>
+        <Eyebrow style={{ marginBottom: 0 }}>Página clonada (Tynk)</Eyebrow>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: status.c, background: status.bg, padding: "2px 9px", borderRadius: 6 }}>{status.l}</span>
+      </div>
+      <div>
+        <Linha label="Domínio" valor={tynk.domain} />
+        <Linha label="Project ID" valor={tynk.projectId} />
+        <Linha label="Criado em" valor={fmtData(tynk.createdAt)} />
+        <Linha label="Clonado em" valor={fmtData(tynk.clonadoEm)} />
+        <Linha label="Import" valor={tynk.import?.importId ? `${tynk.import.success ? "ok" : "falhou"} · ${tynk.import.importId}` : null} />
+        <Linha label="Status marketplace" valor={tynk.marketplaceApprovalStatus} />
+        <Linha label="Tags" valor={Array.isArray(tynk.tags) && tynk.tags.length ? tynk.tags.join(", ") : null} />
+        <Linha label="Página original" valor={tynk.sourceUrl} />
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+        <Btn href={tynk.pageUrl}>Ver página</Btn>
+        <Btn href={tynk.editUrl}>Editar no Tynk</Btn>
+        <Btn href={tynk.sourceUrl}>Página original</Btn>
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Aba Resumo
 // ─────────────────────────────────────────────────────────────────────────────
 function ResumoTab({ projeto }) {
@@ -159,6 +223,8 @@ function ResumoTab({ projeto }) {
           </button>
         </div>
       </div>
+
+      {projeto.tynk && <TynkInfoCard tynk={projeto.tynk} />}
 
       <div style={{ display: "grid", gridTemplateColumns: m ? "1fr 1fr" : "repeat(4,1fr)", gap: 12 }}>
         <MiniStat label="Faturamento" value={fmtBRL(projeto.faturamento || 0)} />
@@ -502,9 +568,171 @@ function EstruturasTab({ projeto, onEditarEstrutura }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Gasto (UTMFy) × Faturamento (Cakto) — alimentado pelas conexões
+// ─────────────────────────────────────────────────────────────────────────────
+function ResumoIntegracoes({ projeto, onSyncMetricas, onEditarGasto }) {
+  const m = useMobile();
+  const cakto = !!projeto.conexoes?.cakto?.conectado;
+
+  const [sinc, setSinc] = useState(false);
+  const [erro, setErro] = useState("");
+  const [meta, setMeta] = useState(null); // { em, real }
+  const [editGasto, setEditGasto] = useState(false);
+  const [draftGasto, setDraftGasto] = useState("");
+
+  const faturamento = cakto ? (projeto.faturamento || 0) : null;
+  const gasto = projeto.gastoAds || 0;          // entrada manual
+  const temGasto = gasto > 0;
+  const lucro = faturamento != null && temGasto ? faturamento - gasto : null;
+  const roas = faturamento != null && temGasto ? faturamento / gasto : null;
+  const maxBar = Math.max(faturamento || 0, gasto || 0, 1);
+
+  const sincronizar = async () => {
+    setSinc(true); setErro("");
+    try {
+      const r = await sincronizarMetricas(projeto);
+      const patch = {};
+      if (r.faturamento != null) patch.faturamento = r.faturamento;
+      if (r.gastoAds != null) patch.gastoAds = r.gastoAds;
+      if (r.lucro != null) patch.lucro = r.lucro;
+      onSyncMetricas?.(patch);
+      setMeta({ em: r.sincronizadoEm, real: r.faturamento != null });
+    } catch (e) {
+      setErro(e.message || "Erro ao sincronizar.");
+    } finally {
+      setSinc(false);
+    }
+  };
+
+  const salvarGasto = () => {
+    const v = Math.max(0, Number(String(draftGasto).replace(",", ".")) || 0);
+    onEditarGasto?.(v);
+    setEditGasto(false);
+  };
+
+  const horaSync = meta?.em
+    ? new Date(meta.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  const Metric = ({ label, fonte, valor, indisponivel, pendente, pendenteMsg, cor }) => (
+    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px 16px" }}>
+      <div style={{ fontSize: 11.5, color: T.muted, fontWeight: 500 }}>{label}</div>
+      {indisponivel ? (
+        <div style={{ fontSize: 13, color: T.faint, marginTop: 6 }}>Conecte {fonte}</div>
+      ) : pendente ? (
+        <div style={{ fontSize: 12.5, color: T.faint, marginTop: 6, lineHeight: 1.35 }}>{pendenteMsg}</div>
+      ) : (
+        <>
+          <div style={{ fontFamily: fontDisplay, fontSize: 22, fontWeight: 600, fontVariantNumeric: "tabular-nums", marginTop: 4, color: cor || T.ink }}>{valor}</div>
+          <div style={{ fontSize: 10.5, color: T.faint, marginTop: 2 }}>via {fonte}</div>
+        </>
+      )}
+    </div>
+  );
+
+  const Barra = ({ label, valor, cor }) => (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+        <span style={{ color: T.muted }}>{label}</span>
+        <span style={{ fontFamily: fontDisplay, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmtBRL(valor || 0)}</span>
+      </div>
+      <div style={{ height: 8, background: T.hair, borderRadius: 5, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${((valor || 0) / maxBar) * 100}%`, background: cor, borderRadius: 5, transition: "width .4s ease" }} />
+      </div>
+    </div>
+  );
+
+  const inputGastoSt = { width: "100%", padding: "6px 9px", borderRadius: 8, border: `1px solid ${T.border}`,
+    fontSize: 14, fontFamily: fontBody, outline: "none", background: T.surfaceAlt, color: T.ink };
+
+  return (
+    <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+        <div>
+          <Eyebrow style={{ marginBottom: 4 }}>Gasto × Faturamento</Eyebrow>
+          <div style={{ fontSize: 12.5, color: T.faint }}>
+            Faturamento real da Cakto. Informe o gasto de anúncios (visto no UTMfy) manualmente.
+          </div>
+        </div>
+        {cakto && (
+          <button onClick={sincronizar} disabled={sinc}
+            style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 600,
+              color: "#fff", border: "none", background: sinc ? T.faint : T.primary, borderRadius: 10,
+              padding: "9px 14px", cursor: sinc ? "wait" : "pointer", flexShrink: 0 }}>
+            <Refresh size={14} /> {sinc ? "Sincronizando…" : "Sincronizar faturamento"}
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: m ? "1fr 1fr" : "repeat(4,1fr)", gap: 12 }}>
+        <Metric label="Faturamento" fonte="Cakto" indisponivel={!cakto} valor={fmtBRL(faturamento || 0)} cor={T.pos} />
+
+        {/* Gasto com anúncios — entrada manual */}
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 500 }}>Gasto com anúncios</span>
+            {!editGasto && (
+              <button onClick={() => { setDraftGasto(temGasto ? String(gasto) : ""); setEditGasto(true); }}
+                title="Editar gasto" style={{ border: "none", background: "transparent", color: T.faint, display: "flex", padding: 2 }}>
+                <Pencil size={13} />
+              </button>
+            )}
+          </div>
+          {editGasto ? (
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              <input autoFocus type="number" min="0" step="0.01" value={draftGasto}
+                onChange={(e) => setDraftGasto(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") salvarGasto(); if (e.key === "Escape") setEditGasto(false); }}
+                placeholder="0,00" style={inputGastoSt} />
+              <button onClick={salvarGasto} title="Salvar"
+                style={{ border: "none", background: T.primary, color: "#fff", borderRadius: 8, padding: "0 9px" }}><Check size={14} /></button>
+              <button onClick={() => setEditGasto(false)} title="Cancelar"
+                style={{ border: `1px solid ${T.border}`, background: T.surface, color: T.muted, borderRadius: 8, padding: "0 9px" }}><X size={14} /></button>
+            </div>
+          ) : temGasto ? (
+            <>
+              <div style={{ fontFamily: fontDisplay, fontSize: 22, fontWeight: 600, fontVariantNumeric: "tabular-nums", marginTop: 4 }}>{fmtBRL(gasto)}</div>
+              <div style={{ fontSize: 10.5, color: T.faint, marginTop: 2 }}>manual (UTMfy)</div>
+            </>
+          ) : (
+            <button onClick={() => { setDraftGasto(""); setEditGasto(true); }}
+              style={{ marginTop: 8, fontSize: 12.5, color: T.primaryText, fontWeight: 600, border: "none", background: "transparent", padding: 0 }}>
+              + Informar gasto
+            </button>
+          )}
+        </div>
+
+        <Metric label="Lucro" fonte="Cakto − gasto" pendente={lucro == null} pendenteMsg="informe o gasto"
+          valor={fmtBRL(lucro || 0)} cor={(lucro || 0) >= 0 ? T.pos : T.neg} />
+        <Metric label="ROAS" fonte="fat. ÷ gasto" pendente={roas == null} pendenteMsg="informe o gasto"
+          valor={roas != null ? `${roas.toFixed(2)}x` : "—"} cor={(roas || 0) >= 1 ? T.pos : T.neg} />
+      </div>
+
+      {faturamento != null && temGasto && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 18 }}>
+          <Barra label="Faturamento (Cakto)" valor={faturamento} cor={T.pos} />
+          <Barra label="Gasto em anúncios" valor={gasto} cor={T.primary} />
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 11.5, color: T.faint, flexWrap: "wrap" }}>
+        {!cakto && <span>Conecte a Cakto na aba <b style={{ color: T.muted }}>Conexões</b> para puxar o faturamento.</span>}
+        {horaSync && <span>Faturamento sincronizado {horaSync}</span>}
+        {meta?.real && (
+          <span style={{ color: T.pos, background: T.posBg, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
+            faturamento real (Cakto)
+          </span>
+        )}
+        {erro && <span style={{ color: T.neg }}>{erro}</span>}
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Aba Anúncios/Desempenho
 // ─────────────────────────────────────────────────────────────────────────────
-function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir }) {
+function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir, onSyncMetricas, onEditarGasto }) {
   const m = useMobile();
   const CORES = ["#B89C82", "#7FA6A0", "#A6809A"];
   const [utmfyOn, setUtmfyOn] = useState(true);
@@ -523,6 +751,8 @@ function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <ResumoIntegracoes projeto={projeto} onSyncMetricas={onSyncMetricas} onEditarGasto={onEditarGasto} />
+
       {/* Banner UTMfy */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
         background: utmfyOn ? "rgba(124,92,255,0.10)" : T.surface, border: `1px solid ${utmfyOn ? "rgba(124,92,255,0.3)" : T.border}`,
@@ -616,11 +846,214 @@ function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Aba Conexões — integrações de API (Cakto, UTMFy)
+// ─────────────────────────────────────────────────────────────────────────────
+const PROVEDORES = [
+  {
+    key: "cakto",
+    nome: "Cakto",
+    tipo: "Gateway de pagamento",
+    desc: "Sincroniza vendas, faturamento e reembolsos direto do checkout.",
+    icon: CreditCard,
+    cor: "#0EA56A",
+    site: "https://cakto.com.br",
+    obrigatorios: ["clientId", "clientSecret"],
+    campos: [
+      { k: "clientId", label: "Client ID", placeholder: "client_id da Cakto" },
+      { k: "clientSecret", label: "Client Secret", secret: true, placeholder: "client_secret (mostrado só na criação)",
+        hint: "OAuth2: o par client_id + client_secret é trocado por um access_token." },
+      { k: "webhookSecret", label: "Webhook Secret", secret: true, placeholder: "defina um segredo forte",
+        hint: "Use o mesmo valor em CAKTO_WEBHOOK_SECRET no servidor e no painel da Cakto." },
+    ],
+    webhookPath: "/api/cakto-webhook",
+  },
+  {
+    key: "utmfy",
+    nome: "UTMFy",
+    tipo: "Métricas de anúncios",
+    desc: "Traz gasto, ROAS, vendas e campanhas do gerenciador de anúncios.",
+    icon: ChartBar,
+    cor: "#7C5CFF",
+    site: "https://utmify.com.br",
+    obrigatorios: ["token"],
+    campos: [
+      { k: "base", label: "API Base", placeholder: "https://api.utmify.com.br" },
+      { k: "token", label: "API Token", secret: true, placeholder: "utmfy_..." },
+    ],
+  },
+];
+
+function CampoSecreto({ campo, valor, onChange }) {
+  const [show, setShow] = useState(false);
+  const isSecret = campo.secret;
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 6 }}>{campo.label}</div>
+      <div style={{ position: "relative" }}>
+        <input
+          type={isSecret && !show ? "password" : "text"}
+          value={valor || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={campo.placeholder}
+          style={{ width: "100%", padding: isSecret ? "10px 38px 10px 12px" : "10px 12px", borderRadius: 10,
+            border: `1px solid ${T.border}`, fontSize: 13, fontFamily: fontBody, outline: "none",
+            background: T.surfaceAlt, color: T.ink }}
+        />
+        {isSecret && (
+          <button type="button" onClick={() => setShow((s) => !s)} title={show ? "Ocultar" : "Mostrar"}
+            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", border: "none",
+              background: "transparent", color: T.faint, display: "flex", padding: 6 }}>
+            {show ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        )}
+      </div>
+      {campo.hint && <div style={{ fontSize: 11.5, color: T.faint, marginTop: 5, lineHeight: 1.4 }}>{campo.hint}</div>}
+    </div>
+  );
+}
+
+function IntegracaoCard({ prov, valores, onConectar, onDesconectar }) {
+  const [draft, setDraft] = useState(valores || {});
+  const [copiado, setCopiado] = useState(false);
+  const Icon = prov.icon;
+  const conectado = !!valores?.conectado;
+  const webhookUrl = prov.webhookPath
+    ? (typeof window !== "undefined" ? window.location.origin : "") + prov.webhookPath
+    : null;
+
+  const faltando = prov.obrigatorios.filter((k) => !(draft[k] || "").trim());
+  const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }));
+
+  const copiar = () => {
+    if (!webhookUrl) return;
+    navigator.clipboard?.writeText(webhookUrl).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    });
+  };
+
+  return (
+    <section style={{ background: T.surface, border: `1px solid ${conectado ? "rgba(52,199,89,0.45)" : T.border}`,
+      borderRadius: 18, padding: 22 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: prov.cor, display: "flex",
+          alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={22} color="#fff" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: fontDisplay, fontSize: 16, fontWeight: 600 }}>{prov.nome}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.3, color: T.muted,
+              background: T.hair, padding: "2px 8px", borderRadius: 6 }}>{prov.tipo}</span>
+            {conectado ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 600,
+                color: T.pos, background: T.posBg, padding: "2px 9px", borderRadius: 6 }}>
+                <CircleCheck size={13} /> Conectado
+              </span>
+            ) : (
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: T.muted, background: T.hair,
+                padding: "2px 9px", borderRadius: 6 }}>Não conectado</span>
+            )}
+          </div>
+          <p style={{ fontSize: 13, color: T.muted, margin: "5px 0 0", lineHeight: 1.45 }}>{prov.desc}</p>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+        {prov.campos.map((c) => (
+          <CampoSecreto key={c.k} campo={c} valor={draft[c.k]} onChange={(v) => set(c.k, v)} />
+        ))}
+      </div>
+
+      {webhookUrl && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 6 }}>
+            URL do webhook <span style={{ color: T.faint, fontWeight: 400 }}>(cole no painel da Cakto)</span>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input readOnly value={webhookUrl}
+              style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 10, border: `1px solid ${T.border}`,
+                fontSize: 12.5, fontFamily: fontBody, background: T.hair, color: T.muted, outline: "none" }} />
+            <button onClick={copiar}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 14px", borderRadius: 10,
+                border: `1px solid ${T.border}`, background: T.surface, color: copiado ? T.pos : T.ink,
+                fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap" }}>
+              {copiado ? <Check size={14} /> : <Copy size={14} />} {copiado ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        marginTop: 18, flexWrap: "wrap" }}>
+        <a href={prov.site} target="_blank" rel="noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: T.muted, textDecoration: "none" }}>
+          <ExternalLink size={13} /> Onde encontrar minhas chaves
+        </a>
+        <div style={{ display: "flex", gap: 8 }}>
+          {conectado && (
+            <button onClick={onDesconectar}
+              style={{ fontSize: 12.5, fontWeight: 600, color: T.neg, border: `1px solid ${T.border}`,
+                background: T.surface, borderRadius: 10, padding: "9px 14px" }}>
+              Desconectar
+            </button>
+          )}
+          <button onClick={() => onConectar(draft)} disabled={faltando.length > 0}
+            style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600,
+              color: "#fff", border: "none", borderRadius: 10, padding: "9px 16px",
+              background: faltando.length > 0 ? T.faint : T.primary,
+              cursor: faltando.length > 0 ? "not-allowed" : "pointer" }}>
+            <PlugConnected size={15} /> {conectado ? "Salvar alterações" : "Salvar e conectar"}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ConexoesTab({ projeto, onSalvar }) {
+  const conexoes = projeto.conexoes || {};
+
+  const salvarProvedor = (prov, dados) => {
+    const novo = { ...conexoes, [prov.key]: { ...dados, conectado: true, em: new Date().toISOString() } };
+    onSalvar?.(novo, `conectou o ${prov.nome}`);
+  };
+  const desconectarProvedor = (prov) => {
+    const novo = { ...conexoes, [prov.key]: { ...(conexoes[prov.key] || {}), conectado: false } };
+    onSalvar?.(novo, `desconectou o ${prov.nome}`);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", gap: 11, alignItems: "flex-start", background: T.primaryBg,
+        border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 16px" }}>
+        <PlugConnected size={18} color={T.primary} style={{ flexShrink: 0, marginTop: 1 }} />
+        <p style={{ fontSize: 12.5, color: T.muted, margin: 0, lineHeight: 1.5 }}>
+          Conecte as APIs deste projeto. As credenciais ficam salvas no projeto; a sincronização real de
+          métricas e vendas roda no servidor (requer as variáveis de ambiente configuradas no backend).
+        </p>
+      </div>
+
+      {PROVEDORES.map((prov) => (
+        <IntegracaoCard
+          key={prov.key}
+          prov={prov}
+          valores={conexoes[prov.key]}
+          onConectar={(dados) => salvarProvedor(prov, dados)}
+          onDesconectar={() => desconectarProvedor(prov)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ProjetoDetalhe — orquestrador das abas
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ProjetoDetalhe({
   projeto, aba, setAba, onVoltar, userById, atividade = [],
   onEditarPersona, onEditarOferta, onRegistrar, naoAtribuidos = [], onAtribuir, onEditarEstrutura,
+  onEditarConexoes, onSyncMetricas, onEditarGasto,
 }) {
   return (
     <div>
@@ -644,6 +1077,7 @@ export default function ProjetoDetalhe({
           { id: "oferta", l: "Gestão de oferta" },
           { id: "estruturas", l: "Estruturas" },
           { id: "anuncios", l: "Desempenho" },
+          { id: "conexoes", l: "Conexões" },
         ].map((t) => (
           <button key={t.id} onClick={() => setAba(t.id)}
             style={{ border: "none", background: "transparent", padding: "10px 4px", marginRight: 18, whiteSpace: "nowrap",
@@ -658,7 +1092,8 @@ export default function ProjetoDetalhe({
       {aba === "overview"  && <ProjetoOverview projeto={projeto} />}
       {aba === "oferta"    && <GestaoOferta projeto={projeto} userById={userById} atividade={atividade} onEditarPersona={onEditarPersona} onEditarOferta={onEditarOferta} />}
       {aba === "estruturas"&& <EstruturasTab projeto={projeto} onEditarEstrutura={onEditarEstrutura} />}
-      {aba === "anuncios"  && <AnunciosTab projeto={projeto} onRegistrar={onRegistrar} naoAtribuidos={naoAtribuidos} onAtribuir={onAtribuir} />}
+      {aba === "anuncios"  && <AnunciosTab projeto={projeto} onRegistrar={onRegistrar} naoAtribuidos={naoAtribuidos} onAtribuir={onAtribuir} onSyncMetricas={onSyncMetricas} onEditarGasto={onEditarGasto} />}
+      {aba === "conexoes"  && <ConexoesTab projeto={projeto} onSalvar={onEditarConexoes} />}
     </div>
   );
 }

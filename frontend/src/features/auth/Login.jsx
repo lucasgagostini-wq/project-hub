@@ -26,7 +26,7 @@ export default function Login({ onEntrar, usuarios = MOCK_USERS }) {
 
   return (
     <div className="grid-bg" style={{ minHeight: "100vh", fontFamily: fontBody, color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ width: "100%", maxWidth: 380, background: T.surface, borderRadius: 20, padding: "32px 28px", border: `1px solid ${T.border}`, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
+      <div style={{ width: "100%", maxWidth: 380, background: T.surface, borderRadius: 20, padding: "32px 28px", border: `1px solid ${T.border}`, boxShadow: "0 12px 40px rgba(0,0,0,0.08)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Target size={16} color="#fff" />

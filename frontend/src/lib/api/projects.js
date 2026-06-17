@@ -229,6 +229,24 @@ export async function upsertOffer(projectId, patch) {
   return data;
 }
 
+// ── Conexões / integrações (Cakto, UTMFy) ───────────────────
+// Guardado no campo jsonb `conexoes` do projeto. Em produção, requer uma
+// coluna `conexoes jsonb` na tabela projects (segue o mesmo molde de `estruturas`).
+export async function upsertConexoes(projectId, conexoes) {
+  if (isMockMode) {
+    mockProjetos = mockProjetos.map((p) =>
+      p.id === projectId ? { ...p, conexoes } : p
+    );
+    return mockProjetos.find((p) => p.id === projectId)?.conexoes;
+  }
+  const { error } = await supabase
+    .from("projects")
+    .update({ conexoes })
+    .eq("id", projectId);
+  if (error) throw error;
+  return conexoes;
+}
+
 // ── Persona ──────────────────────────────────────────────────
 
 export async function upsertPersona(projectId, patch) {

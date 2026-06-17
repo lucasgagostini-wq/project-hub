@@ -1,25 +1,27 @@
 export const T = {
-  bg: "#0D1117",
-  surface: "#111827",
-  surfaceAlt: "#1A2333",
-  ink: "#F1F5F9",
-  muted: "#94A3B8",
-  faint: "#64748B",
-  border: "#1E2A3A",
-  hair: "#162032",
-  pos: "#10B981",
-  posBg: "rgba(16,185,129,0.12)",
-  neg: "#EF4444",
-  negBg: "rgba(239,68,68,0.12)",
-  warn: "#F59E0B",
-  warnBg: "rgba(245,158,11,0.12)",
-  primary: "#3B82F6",
-  primaryBg: "rgba(59,130,246,0.10)",
-  primaryText: "#60A5FA",
+  bg: "#F5F5F7",
+  surface: "#FFFFFF",
+  surfaceAlt: "#FAFAFA",
+  ink: "#1D1D1F",
+  muted: "#6E6E73",
+  faint: "#A1A1A6",
+  border: "#E5E5EA",
+  hair: "#F0F0F2",
+  pos: "#34C759",
+  posBg: "rgba(52,199,89,0.12)",
+  neg: "#FF3B30",
+  negBg: "rgba(255,59,48,0.12)",
+  warn: "#FF9F0A",
+  warnBg: "rgba(255,159,10,0.12)",
+  primary: "#0071E3",
+  primaryBg: "rgba(0,113,227,0.10)",
+  primaryText: "#0066CC",
 };
 
-export const fontDisplay = "'Space Grotesk', ui-sans-serif, system-ui";
-export const fontBody = "'Inter', ui-sans-serif, system-ui";
+export const fontDisplay =
+  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif";
+export const fontBody =
+  "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif";
 
 export const fmtBRL = (n) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -28,26 +30,23 @@ export const fmtBRLc = (n) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export const GLOBAL_STYLE = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; }
-  body { margin: 0; background: ${T.bg}; }
-  button { cursor: pointer; font-family: inherit; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1E2A3A; border-radius: 6px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2D3E55; }
-  .grid-bg {
-    background-color: #0D1117;
-    background-image:
-      linear-gradient(rgba(59,130,246,0.10) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59,130,246,0.10) 1px, transparent 1px),
-      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
-    background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
-    animation: gridDrift 35s linear infinite;
+  html, body { margin: 0; background: ${T.bg}; }
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    color: ${T.ink};
   }
-  @keyframes gridDrift {
-    0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
-    100% { background-position: 0 64px, 0 64px, 0 16px, 0 16px; }
+  button { cursor: pointer; font-family: inherit; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #D2D2D7; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #B0B0B5; }
+  .grid-bg {
+    background-color: ${T.bg};
+    background-image: radial-gradient(120% 90% at 50% -10%, #FFFFFF 0%, ${T.bg} 60%);
+    background-attachment: fixed;
   }
 `;
