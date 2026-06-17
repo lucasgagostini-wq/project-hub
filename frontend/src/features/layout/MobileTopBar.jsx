@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { IconTarget as Target, IconLogout as LogOut } from "@tabler/icons-react";
+import { IconTarget as Target, IconLogout as LogOut, IconUserCog as UserCog } from "@tabler/icons-react";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar } from "../../components";
 
-export default function MobileTopBar({ usuario, usuarios = [], onTrocar, onSair }) {
+export default function MobileTopBar({ usuario, usuarios = [], onTrocar, onEditarPerfil, onSair }) {
   const [aberto, setAberto] = useState(false);
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 30, background: T.surface, borderBottom: `1px solid ${T.border}`, color: T.ink,
@@ -28,6 +28,11 @@ export default function MobileTopBar({ usuario, usuarios = [], onTrocar, onSair 
                 <span style={{ fontSize: 12.5 }}>{(u.nome || u.name || "").split(" ")[0]}</span>
               </button>
             ))}
+            <div style={{ height: 1, background: T.hair, margin: "4px 0" }} />
+            <button onClick={() => { onEditarPerfil?.(); setAberto(false); }}
+              style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 9px", borderRadius: 8, border: "none", background: "transparent", color: T.ink, fontSize: 12.5 }}>
+              <UserCog size={15} /> Editar perfil
+            </button>
             <button onClick={onSair} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 9px", borderRadius: 8, border: "none", background: "transparent", color: T.neg, fontSize: 12.5 }}>
               <LogOut size={15} /> Sair
             </button>

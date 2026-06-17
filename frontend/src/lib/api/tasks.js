@@ -39,7 +39,7 @@ export async function listTasks(filters = {}) {
   }
   let q = supabase
     .from("tasks")
-    .select("*, assignee:profiles!assignee_id(id, name, initial, color, role), project:projects(id, name)");
+    .select("*, assignee:profiles!assignee_id(id, name, initial, color, role, avatar), project:projects(id, name)");
   if (filters.projectId) q = q.eq("project_id", filters.projectId);
   if (filters.userId) q = q.eq("assignee_id", filters.userId);
   q = q.order("due_date", { ascending: true });
@@ -57,7 +57,7 @@ export async function createTask(payload) {
   const { data, error } = await supabase
     .from("tasks")
     .insert({ ...toDb(payload), done: false })
-    .select("*, assignee:profiles!assignee_id(id, name, initial, color, role), project:projects(id, name)")
+    .select("*, assignee:profiles!assignee_id(id, name, initial, color, role, avatar), project:projects(id, name)")
     .single();
   if (error) throw error;
   return normTask(data);
@@ -70,7 +70,7 @@ export async function updateTask(id, patch) {
   }
   const { data, error } = await supabase
     .from("tasks").update(toDb(patch)).eq("id", id)
-    .select("*, assignee:profiles!assignee_id(id, name, initial, color, role), project:projects(id, name)")
+    .select("*, assignee:profiles!assignee_id(id, name, initial, color, role, avatar), project:projects(id, name)")
     .single();
   if (error) throw error;
   return normTask(data);

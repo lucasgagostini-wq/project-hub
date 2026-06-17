@@ -63,7 +63,7 @@ export async function listUsers() {
   if (isMockMode) return MOCK_USERS;
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, initial, color, role")
+    .select("id, name, initial, color, role, avatar")
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data || []).map(normProfile);
@@ -72,6 +72,23 @@ export async function listUsers() {
 export async function getProfile(userId) {
   if (isMockMode) return MOCK_USERS.find((u) => u.id === userId) ?? MOCK_USERS[0];
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  if (error) throw error;
+  return normProfile(data);
+}
+
+// Edita o próprio perfil (apelido, cor, foto). patch usa chaves PT ou EN.
+export async function updateProfile(id, patch) {
+  const db = {};
+  if (patch.nome !== undefined || patch.name !== undefined) db.name = patch.nome ?? patch.name;
+  if (patch.inicial !== undefined || patch.initial !== undefined) db.initial = patch.inicial ?? patch.initial;
+  if (patch.cor !== undefined || patch.color !== undefined) db.color = patch.cor ?? patch.color;
+  if (patch.avatar !== undefined) db.avatar = patch.avatar;
+  if (isMockMode) {
+    const u = MOCK_USERS.find((x) => x.id === id);
+    if (u) Object.assign(u, { nome: db.name ?? u.nome, inicial: db.initial ?? u.inicial, cor: db.color ?? u.cor, avatar: db.avatar ?? u.avatar });
+    return u;
+  }
+  const { data, error } = await supabase.from("profiles").update(db).eq("id", id).select("*").single();
   if (error) throw error;
   return normProfile(data);
 }

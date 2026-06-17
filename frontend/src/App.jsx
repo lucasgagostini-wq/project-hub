@@ -13,7 +13,7 @@ import {
   MOCK_USERS, MOCK_PROJETOS, MOCK_ATIVIDADE, MOCK_TAREFAS,
   MOCK_REUNIOES, MOCK_NAO_ATRIBUIDOS,
 } from "./lib/api/mockData";
-import { signOut, listUsers, getActor, setActor } from "./lib/api/auth";
+import { signOut, listUsers, getActor, setActor, updateProfile } from "./lib/api/auth";
 import { listProjects, createProject, updateProject, upsertOffer, upsertPersona, upsertConexoes } from "./lib/api/projects";
 import { listTasks, createTask, updateTask } from "./lib/api/tasks";
 import { listMeetings } from "./lib/api/meetings";
@@ -32,6 +32,7 @@ import Projetos          from "./features/projects/Projetos";
 import ProjetoDetalhe    from "./features/projects/ProjetoDetalhe";
 import NovoProjeto       from "./features/projects/NovoProjeto";
 import IdeiasGerais      from "./features/ideas/IdeiasGerais";
+import MeuPerfil         from "./features/profile/MeuPerfil";
 
 // Persistência local enquanto não há Supabase (modo mock).
 // Mantém projetos/atividade salvos no navegador para sobreviver a reload.
@@ -76,6 +77,7 @@ export default function App() {
   const [abaProjeto, setAbaProjeto] = useState("resumo");
   const [novoOpen, setNovoOpen]     = useState(false);
   const [novoInicial, setNovoInicial] = useState(null); // prefill ao "virar projeto"
+  const [perfilOpen, setPerfilOpen]   = useState(false); // modal "Meu perfil"
 
   // ── Tema (claro / escuro) ────────────────────────────────────────────
   const [themeMode, setThemeMode] = useState(getThemeMode());
@@ -225,6 +227,22 @@ export default function App() {
     setUsuarioAtual(perfil);
   };
 
+  // Salva edições do próprio perfil (apelido, cor, foto) e propaga no app.
+  const salvarPerfil = async (patch) => {
+    const merged = {
+      ...usuarioAtual,
+      nome: patch.nome, name: patch.nome,
+      cor: patch.cor, color: patch.cor,
+      inicial: patch.inicial, initial: patch.inicial,
+      avatar: patch.avatar,
+    };
+    setUsuarioAtual(merged);
+    setUsuarios((us) => us.map((u) => (u.id === merged.id ? merged : u)));
+    if (!isMockMode) setActor(merged);
+    try { await updateProfile(merged.id, patch); } catch (e) { console.error("[perfil] salvar:", e); }
+    setPerfilOpen(false);
+  };
+
   // ── Loading screen ───────────────────────────────────────────────────
   if (authLoading) {
     return (
@@ -275,6 +293,7 @@ export default function App() {
             usuario={usuarioAtual}
             usuarios={usuarios}
             onTrocar={trocarPerfil}
+            onEditarPerfil={() => setPerfilOpen(true)}
             onSair={handleSair}
           />
         ) : (
@@ -284,6 +303,7 @@ export default function App() {
             usuario={usuarioAtual}
             usuarios={usuarios}
             onTrocar={trocarPerfil}
+            onEditarPerfil={() => setPerfilOpen(true)}
             onSair={handleSair}
           />
         )}
@@ -472,6 +492,11 @@ export default function App() {
               />
             </div>
           </div>
+        )}
+
+        {/* ── Meu perfil overlay ── */}
+        {perfilOpen && usuarioAtual && (
+          <MeuPerfil perfil={usuarioAtual} onSalvar={salvarPerfil} onFechar={() => setPerfilOpen(false)} />
         )}
 
         {/* ── Mobile bottom nav ── */}

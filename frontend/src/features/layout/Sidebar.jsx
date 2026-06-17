@@ -8,6 +8,7 @@ import {
   IconLogout as LogOut,
   IconTarget as Target,
   IconBulb as Bulb,
+  IconUserCog as UserCog,
 } from "@tabler/icons-react";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar } from "../../components";
@@ -21,7 +22,7 @@ const NAV_ITENS = [
   { id: "reunioes",  label: "Reuniões",          icon: Users2 },
 ];
 
-export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar, onSair }) {
+export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar, onEditarPerfil, onSair }) {
   const [trocarOpen, setTrocarOpen] = useState(false);
   return (
     <aside style={{ width: 236, flexShrink: 0, background: T.surface, borderRight: `1px solid ${T.border}`, color: T.ink,
@@ -60,6 +61,12 @@ export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar
                 <span style={{ fontSize: 12.5 }}>{(u.nome || u.name || "").split(" ")[0]}</span>
               </button>
             ))}
+            <div style={{ height: 1, background: T.hair, margin: "4px 0" }} />
+            <button onClick={() => { onEditarPerfil?.(); setTrocarOpen(false); }}
+              style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 9px",
+                borderRadius: 8, border: "none", background: "transparent", color: T.ink, fontSize: 12.5 }}>
+              <UserCog size={15} /> Editar perfil
+            </button>
             <button onClick={onSair} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%",
               padding: "8px 9px", borderRadius: 8, border: "none", background: "transparent", color: T.neg, fontSize: 12.5 }}>
               <LogOut size={15} /> Sair

@@ -9,6 +9,17 @@ import { T, fontDisplay, fontBody } from "../lib/theme";
 
 export function Avatar({ user, size = 30 }) {
   if (!user) return null;
+  const foto = user.avatar || user.avatar_url;
+  if (foto) {
+    return (
+      <img
+        src={foto}
+        alt={user.nome || user.name || ""}
+        title={user.nome || user.name}
+        style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", flexShrink: 0, display: "block" }}
+      />
+    );
+  }
   return (
     <div
       title={user.nome || user.name}

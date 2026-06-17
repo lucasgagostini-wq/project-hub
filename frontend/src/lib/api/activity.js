@@ -22,7 +22,7 @@ function normAtividade(row) {
     id: row.id,
     proj: row.project_id,
     user: row.user_id,
-    userObj: u ? { id: u.id, nome: u.name, name: u.name, inicial: u.initial, initial: u.initial, cor: u.color, color: u.color, papel: u.role } : null,
+    userObj: u ? { id: u.id, nome: u.name, name: u.name, inicial: u.initial, initial: u.initial, cor: u.color, color: u.color, papel: u.role, avatar: u.avatar } : null,
     acao: row.action,
     quando: tempoAtras(row.created_at),
     created_at: row.created_at,
@@ -35,7 +35,7 @@ export async function listActivity(projectId) {
   }
   let q = supabase
     .from("audit_log")
-    .select("*, user:profiles(id, name, initial, color, role)")
+    .select("*, user:profiles(id, name, initial, color, role, avatar)")
     .order("created_at", { ascending: false })
     .limit(100);
   if (projectId) q = q.eq("project_id", projectId);
