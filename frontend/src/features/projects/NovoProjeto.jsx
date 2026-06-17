@@ -3,9 +3,12 @@ import {
   IconArrowLeft as ArrowLeft,
   IconPlus as Plus,
   IconX as X,
+  IconCopy as Copy,
+  IconWand as Wand,
 } from "@tabler/icons-react";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Eyebrow } from "../../components";
+import { clonarOferta } from "../../lib/api/clone";
 
 const inputSt = {
   width: "100%",
@@ -57,7 +60,52 @@ export default function NovoProjeto({ onVoltar, onCriar }) {
   const [submitting, setSubmitting] = useState(false);
   const [erros, setErros] = useState({});
 
+  // ── Clonagem de oferta ──────────────────────────────────────────────
+  const [cloneUrl, setCloneUrl] = useState("");
+  const [cloning, setCloning] = useState(false);
+  const [cloneMsg, setCloneMsg] = useState(null); // { tipo: "ok" | "erro", texto }
+  const [cloneTynk, setCloneTynk] = useState(null); // metadata retornada pelo Tynk
+
   const set = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+
+  const clonar = async () => {
+    if (cloning) return;
+    if (!cloneUrl.trim()) { setCloneMsg({ tipo: "erro", texto: "Cole a URL da página de vendas." }); return; }
+    setCloning(true); setCloneMsg(null);
+    try {
+      const d = await clonarOferta({ url: cloneUrl.trim(), nome: form.nome });
+      setForm((f) => ({
+        ...f,
+        nome:     f.nome || d.nome || "",
+        nicho:    d.nicho    || f.nicho,
+        oferta:   d.oferta   || f.oferta,
+        publico:  d.publico  || f.publico,
+        idade:    d.idade    || f.idade,
+        preco:    d.preco    || f.preco,
+        garantia: d.garantia || f.garantia,
+        persona_nome:    d.persona?.nome    || f.persona_nome,
+        persona_canal:   d.persona?.canal   || f.persona_canal,
+        persona_dor:     d.persona?.dor     || f.persona_dor,
+        persona_desejo:  d.persona?.desejo  || f.persona_desejo,
+        persona_objecao: d.persona?.objecao || f.persona_objecao,
+      }));
+      const novosLinks = [
+        { tipo: "Página de vendas", url: cloneUrl.trim() },
+        ...((d.links || []).filter((l) => l.url)),
+      ];
+      if (novosLinks.length) setLinksTipo(novosLinks);
+      setCloneTynk(d.tynk || null);
+      const ref = d.tynk?.domain ? ` (projeto Tynk: ${d.tynk.domain})` : "";
+      setCloneMsg({
+        tipo: "ok",
+        texto: `Página clonada no Tynk ✓${ref}. Preencha a oferta/persona abaixo e clique em Criar projeto.`,
+      });
+    } catch (e) {
+      setCloneMsg({ tipo: "erro", texto: e.message || "Não foi possível clonar a oferta." });
+    } finally {
+      setCloning(false);
+    }
+  };
 
   const addLink = () => setLinksTipo((l) => [...l, { tipo: "", url: "" }]);
   const removeLink = (i) => setLinksTipo((l) => l.filter((_, j) => j !== i));
@@ -86,6 +134,7 @@ export default function NovoProjeto({ onVoltar, onCriar }) {
       } : null,
       faturamento: 0, lucro: 0, gastoAds: 0, tempoOnline: 0, escala: 0,
       criativos: [], estruturas: {}, timeline: [],
+      ...(cloneTynk ? { tynk: cloneTynk } : {}),
     };
     await onCriar?.(payload);
     setSubmitting(false);
@@ -116,6 +165,42 @@ export default function NovoProjeto({ onVoltar, onCriar }) {
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        {/* Clonar oferta */}
+        <section style={{ ...secSt, background: T.primaryBg, border: `1px solid ${T.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Wand size={16} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: 15 }}>Clonar oferta automaticamente</div>
+              <div style={{ fontSize: 12.5, color: T.muted }}>Cole a página de vendas e o app extrai a oferta, público, preço e persona pra você.</div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 4 }}>URL da página de vendas</div>
+              <input value={cloneUrl} onChange={(e) => setCloneUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && clonar()}
+                placeholder="https://..." style={{ ...inputSt, marginTop: 0 }} />
+            </div>
+            <button onClick={clonar} disabled={cloning}
+              style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 18px", borderRadius: 10, border: "none",
+                background: cloning ? T.faint : T.primary, color: "#fff", fontSize: 13.5, fontWeight: 600,
+                cursor: cloning ? "wait" : "pointer", flexShrink: 0 }}>
+              <Copy size={15} /> {cloning ? "Clonando…" : "Clonar oferta"}
+            </button>
+          </div>
+
+          {cloneMsg && (
+            <div style={{ fontSize: 12.5, fontWeight: 500, padding: "9px 12px", borderRadius: 9,
+              color: cloneMsg.tipo === "ok" ? T.pos : T.neg,
+              background: cloneMsg.tipo === "ok" ? T.posBg : T.negBg }}>
+              {cloneMsg.texto}
+            </div>
+          )}
+        </section>
+
         {/* Informações básicas */}
         <section style={secSt}>
           <Eyebrow>Informações básicas</Eyebrow>

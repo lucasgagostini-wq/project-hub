@@ -12,7 +12,7 @@ import {
   MOCK_REUNIOES, MOCK_NAO_ATRIBUIDOS,
 } from "./lib/api/mockData";
 import { signIn, signOut, getProfile, listUsers } from "./lib/api/auth";
-import { listProjects, updateProject, upsertOffer, upsertPersona } from "./lib/api/projects";
+import { listProjects, updateProject, upsertOffer, upsertPersona, upsertConexoes } from "./lib/api/projects";
 import { listTasks, updateTask } from "./lib/api/tasks";
 import { listMeetings } from "./lib/api/meetings";
 import { logActivity } from "./lib/api/activity";
@@ -28,6 +28,24 @@ import Reunioes          from "./features/meetings/Reunioes";
 import Projetos          from "./features/projects/Projetos";
 import ProjetoDetalhe    from "./features/projects/ProjetoDetalhe";
 import NovoProjeto       from "./features/projects/NovoProjeto";
+
+// Persistência local enquanto não há Supabase (modo mock).
+// Mantém projetos/atividade salvos no navegador para sobreviver a reload.
+function loadLocal(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function saveLocal(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch {
+    /* quota cheia (ex.: imagens grandes em base64) — ignora */
+  }
+}
 
 function useIsMobile(breakpoint = 760) {
   const [m, setM] = useState(
@@ -55,8 +73,8 @@ export default function App() {
   const [novoOpen, setNovoOpen]     = useState(false);
 
   // ── Data ────────────────────────────────────────────────────────────
-  const [projetos, setProjetos]           = useState(isMockMode ? MOCK_PROJETOS : []);
-  const [atividade, setAtividade]         = useState(isMockMode ? MOCK_ATIVIDADE : []);
+  const [projetos, setProjetos]           = useState(isMockMode ? loadLocal("ph_projetos", MOCK_PROJETOS) : []);
+  const [atividade, setAtividade]         = useState(isMockMode ? loadLocal("ph_atividade", MOCK_ATIVIDADE) : []);
   const [tarefas, setTarefas]             = useState(isMockMode ? MOCK_TAREFAS : []);
   const [reunioes, setReunioes]           = useState(isMockMode ? MOCK_REUNIOES : []);
   const [naoAtribuidos, setNaoAtribuidos] = useState(MOCK_NAO_ATRIBUIDOS);
@@ -89,6 +107,10 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // ── Persistência local (modo mock) ───────────────────────────────────
+  useEffect(() => { if (isMockMode) saveLocal("ph_projetos", projetos); }, [projetos]);
+  useEffect(() => { if (isMockMode) saveLocal("ph_atividade", atividade); }, [atividade]);
 
   async function handleSession(authUser) {
     try {
@@ -262,6 +284,29 @@ export default function App() {
                 }
                 registrar(projeto.id, `editou a estrutura de ${qual}`);
               }}
+              onEditarConexoes={async (conexoes, label) => {
+                setProjetos((ps) =>
+                  ps.map((p) => (p.id === projeto.id ? { ...p, conexoes } : p))
+                );
+                if (!isMockMode) await upsertConexoes(projeto.id, conexoes).catch(console.error);
+                if (label) registrar(projeto.id, label);
+              }}
+              onSyncMetricas={async (patch) => {
+                setProjetos((ps) =>
+                  ps.map((p) => (p.id === projeto.id ? { ...p, ...patch } : p))
+                );
+                if (!isMockMode) await updateProject(projeto.id, patch).catch(console.error);
+                registrar(projeto.id, "sincronizou as métricas das integrações");
+              }}
+              onEditarGasto={async (gastoAds) => {
+                const fat = projeto.faturamento || 0;
+                const patch = { gastoAds, lucro: fat - gastoAds };
+                setProjetos((ps) =>
+                  ps.map((p) => (p.id === projeto.id ? { ...p, ...patch } : p))
+                );
+                if (!isMockMode) await updateProject(projeto.id, patch).catch(console.error);
+                registrar(projeto.id, "informou o gasto de anúncios");
+              }}
             />
           ) : (
             <>
@@ -310,7 +355,9 @@ export default function App() {
             onClick={() => setNovoOpen(false)}
             style={{
               position: "fixed", inset: 0,
-              background: "rgba(13,17,23,0.92)",
+              background: "rgba(0,0,0,0.28)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
               display: "flex", alignItems: "flex-start", justifyContent: "center",
               padding: "0", overflow: "auto", zIndex: 50,
             }}
@@ -318,8 +365,9 @@ export default function App() {
             <div
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: T.bg, minHeight: "100vh", width: "100%",
+                background: T.surface, minHeight: "100vh", width: "100%",
                 maxWidth: 760, padding: "32px 32px 60px",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.18)",
               }}
             >
               <NovoProjeto
