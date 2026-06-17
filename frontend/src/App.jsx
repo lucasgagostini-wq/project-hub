@@ -18,6 +18,7 @@ import { listProjects, updateProject, upsertOffer, upsertPersona, upsertConexoes
 import { listTasks, updateTask } from "./lib/api/tasks";
 import { listMeetings } from "./lib/api/meetings";
 import { logActivity } from "./lib/api/activity";
+import { listIdeas, createIdea, updateIdea, deleteIdea } from "./lib/api/ideas";
 
 import Login             from "./features/auth/Login";
 import Sidebar           from "./features/layout/Sidebar";
@@ -30,6 +31,7 @@ import Reunioes          from "./features/meetings/Reunioes";
 import Projetos          from "./features/projects/Projetos";
 import ProjetoDetalhe    from "./features/projects/ProjetoDetalhe";
 import NovoProjeto       from "./features/projects/NovoProjeto";
+import IdeiasGerais      from "./features/ideas/IdeiasGerais";
 
 // Persistência local enquanto não há Supabase (modo mock).
 // Mantém projetos/atividade salvos no navegador para sobreviver a reload.
@@ -73,6 +75,7 @@ export default function App() {
   const [projAtivo, setProjAtivo]   = useState(null);
   const [abaProjeto, setAbaProjeto] = useState("resumo");
   const [novoOpen, setNovoOpen]     = useState(false);
+  const [novoInicial, setNovoInicial] = useState(null); // prefill ao "virar projeto"
 
   // ── Tema (claro / escuro) ────────────────────────────────────────────
   const [themeMode, setThemeMode] = useState(getThemeMode());
@@ -85,6 +88,7 @@ export default function App() {
   // ── Data ────────────────────────────────────────────────────────────
   const [projetos, setProjetos]           = useState(isMockMode ? loadLocal("ph_projetos", MOCK_PROJETOS) : []);
   const [atividade, setAtividade]         = useState(isMockMode ? loadLocal("ph_atividade", MOCK_ATIVIDADE) : []);
+  const [ideias, setIdeias]               = useState(isMockMode ? loadLocal("ph_ideias", []) : []);
   const [tarefas, setTarefas]             = useState(isMockMode ? MOCK_TAREFAS : []);
   const [reunioes, setReunioes]           = useState(isMockMode ? MOCK_REUNIOES : []);
   const [naoAtribuidos, setNaoAtribuidos] = useState(MOCK_NAO_ATRIBUIDOS);
@@ -121,21 +125,24 @@ export default function App() {
   // ── Persistência local (modo mock) ───────────────────────────────────
   useEffect(() => { if (isMockMode) saveLocal("ph_projetos", projetos); }, [projetos]);
   useEffect(() => { if (isMockMode) saveLocal("ph_atividade", atividade); }, [atividade]);
+  useEffect(() => { if (isMockMode) saveLocal("ph_ideias", ideias); }, [ideias]);
 
   async function handleSession(authUser) {
     try {
-      const [profile, allUsers, projs, tasks, meetings] = await Promise.all([
+      const [profile, allUsers, projs, tasks, meetings, ideas] = await Promise.all([
         getProfile(authUser.id),
         listUsers(),
         listProjects(),
         listTasks(),
         listMeetings(),
+        listIdeas(),
       ]);
       setUsuarioAtual(profile);
       setUsuarios(allUsers);
       setProjetos(projs);
       setTarefas(tasks);
       setReunioes(meetings);
+      setIdeias(ideas);
       setLogado(true);
     } catch (err) {
       console.error("[App] handleSession error:", err);
@@ -160,6 +167,26 @@ export default function App() {
 
   const setImagem = (id, img) =>
     setProjetos((ps) => ps.map((p) => (p.id === id ? { ...p, imagem: img } : p)));
+
+  // ── Ideias gerais (mock = estado/localStorage; Supabase = tabela ideas) ──
+  const addIdeia = async (dados) => {
+    if (isMockMode) {
+      setIdeias((xs) => [{ id: "ig-" + Date.now(), status: "ideia", criadoEm: new Date().toISOString(), ...dados }, ...xs]);
+      return;
+    }
+    try {
+      const nova = await createIdea(dados);
+      setIdeias((xs) => [nova, ...xs]);
+    } catch (e) { console.error("[ideias] criar:", e); }
+  };
+  const patchIdeia = async (id, campos) => {
+    setIdeias((xs) => xs.map((i) => (i.id === id ? { ...i, ...campos } : i)));
+    if (!isMockMode) await updateIdea(id, campos).catch((e) => console.error("[ideias] atualizar:", e));
+  };
+  const removeIdeia = async (id) => {
+    setIdeias((xs) => xs.filter((i) => i.id !== id));
+    if (!isMockMode) await deleteIdea(id).catch((e) => console.error("[ideias] remover:", e));
+  };
 
   const handleSair = async () => {
     await signOut().catch(() => {});
@@ -317,6 +344,13 @@ export default function App() {
                 if (!isMockMode) await updateProject(projeto.id, patch).catch(console.error);
                 registrar(projeto.id, "informou o gasto de anúncios");
               }}
+              onEditarIdeias={async (ideias, label) => {
+                setProjetos((ps) =>
+                  ps.map((p) => (p.id === projeto.id ? { ...p, ideias } : p))
+                );
+                if (!isMockMode) await updateProject(projeto.id, { ideias }).catch(console.error);
+                if (label) registrar(projeto.id, label);
+              }}
             />
           ) : (
             <>
@@ -333,6 +367,22 @@ export default function App() {
                   onAbrir={abrirProjeto}
                   onNovo={() => setNovoOpen(true)}
                   onSetImagem={setImagem}
+                />
+              )}
+              {secao === "ideias" && (
+                <IdeiasGerais
+                  ideias={ideias}
+                  onAdd={addIdeia}
+                  onPatch={patchIdeia}
+                  onRemove={removeIdeia}
+                  onCriarProjeto={(idea) => {
+                    setNovoInicial({
+                      nome: idea.titulo || "",
+                      nicho: idea.nicho || "",
+                      oferta: idea.descricao || "",
+                    });
+                    setNovoOpen(true);
+                  }}
                 />
               )}
               {secao === "calendario" && (
@@ -362,7 +412,7 @@ export default function App() {
         {/* ── Novo projeto overlay ── */}
         {novoOpen && (
           <div
-            onClick={() => setNovoOpen(false)}
+            onClick={() => { setNovoOpen(false); setNovoInicial(null); }}
             style={{
               position: "fixed", inset: 0,
               background: "rgba(0,0,0,0.28)",
@@ -381,7 +431,8 @@ export default function App() {
               }}
             >
               <NovoProjeto
-                onVoltar={() => setNovoOpen(false)}
+                inicial={novoInicial}
+                onVoltar={() => { setNovoOpen(false); setNovoInicial(null); }}
                 onCriar={async (p) => {
                   setProjetos((ps) => [...ps, p]);
                   setAtividade((a) => [
@@ -389,6 +440,7 @@ export default function App() {
                     ...a,
                   ]);
                   setNovoOpen(false);
+                  setNovoInicial(null);
                   abrirProjeto(p.id);
                 }}
               />

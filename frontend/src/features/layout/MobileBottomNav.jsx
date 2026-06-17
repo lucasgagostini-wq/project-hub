@@ -5,12 +5,14 @@ import {
   IconCalendar as CalendarDays,
   IconListCheck as ListTodo,
   IconUsers as Users2,
+  IconBulb as Bulb,
 } from "@tabler/icons-react";
 import { T } from "../../lib/theme";
 
 const NAV_ITENS = [
   { id: "home",       label: "Início",    icon: Home },
   { id: "projetos",   label: "Projetos",  icon: FolderKanban },
+  { id: "ideias",     label: "Ideias",    icon: Bulb },
   { id: "calendario", label: "Agenda",    icon: CalendarDays },
   { id: "tarefas",    label: "Tarefas",   icon: ListTodo },
   { id: "reunioes",   label: "Reuniões",  icon: Users2 },

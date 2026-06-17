@@ -30,6 +30,9 @@ function norm(row) {
     gastoAds:     row.gasto_ads    ?? 0,
     tempoOnline:  row.tempo_online ?? 0,
     estruturas:   row.estruturas   ?? {},
+    conexoes:     row.conexoes     ?? {},
+    tynk:         row.tynk         ?? null,
+    ideias:       row.ideias       ?? [],
     // Offer fields
     oferta:       offer?.description ?? "",
     publico:      offer?.publico      ?? "",
@@ -108,6 +111,9 @@ export async function createProject(payload) {
       gasto_ads:    payload.gastoAds      ?? 0,
       tempo_online: payload.tempoOnline   ?? 0,
       estruturas:   payload.estruturas    ?? {},
+      conexoes:     payload.conexoes      ?? {},
+      tynk:         payload.tynk          ?? null,
+      ideias:       payload.ideias        ?? [],
     })
     .select("id")
     .single();

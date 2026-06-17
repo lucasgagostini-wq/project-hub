@@ -41,11 +41,11 @@ function Campo({ label, name, value, onChange, area, placeholder }) {
 const VEICULOS = ["Meta Ads", "Google Ads", "TikTok Ads", "YouTube", "Email", "Orgânico"];
 const NICHOS  = ["Saúde e Bem-Estar", "Finanças", "Negócios", "Beleza", "Relacionamentos", "Educação", "Tecnologia", "Entretenimento"];
 
-export default function NovoProjeto({ onVoltar, onCriar }) {
+export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
   const [form, setForm] = useState({
-    nome: "",
-    nicho: "",
-    oferta: "",
+    nome: inicial?.nome || "",
+    nicho: inicial?.nicho || "",
+    oferta: inicial?.oferta || "",
     publico: "",
     idade: "",
     veiculo: "",

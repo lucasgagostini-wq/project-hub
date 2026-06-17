@@ -7,6 +7,7 @@ import {
   IconUsers as Users2,
   IconLogout as LogOut,
   IconTarget as Target,
+  IconBulb as Bulb,
 } from "@tabler/icons-react";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar } from "../../components";
@@ -14,6 +15,7 @@ import { Avatar } from "../../components";
 const NAV_ITENS = [
   { id: "home",      label: "Início",          icon: Home },
   { id: "projetos",  label: "Projetos",         icon: FolderKanban },
+  { id: "ideias",    label: "Ideias",           icon: Bulb },
   { id: "calendario",label: "Calendário geral", icon: CalendarDays },
   { id: "tarefas",   label: "Tarefas gerais",   icon: ListTodo },
   { id: "reunioes",  label: "Reuniões",          icon: Users2 },

@@ -35,6 +35,7 @@ import { useMobile } from "../../lib/context";
 import { gerarTimeline } from "../../lib/utils";
 import { MOCK_ESTRUTURAS } from "../../lib/api/mockData";
 import { sincronizarMetricas } from "../../lib/api/metrics";
+import IdeiasProjeto from "../ideas/IdeiasProjeto";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prévia da oferta (modal)
@@ -1057,7 +1058,7 @@ function ConexoesTab({ projeto, onSalvar }) {
 export default function ProjetoDetalhe({
   projeto, aba, setAba, onVoltar, userById, atividade = [],
   onEditarPersona, onEditarOferta, onRegistrar, naoAtribuidos = [], onAtribuir, onEditarEstrutura,
-  onEditarConexoes, onSyncMetricas, onEditarGasto,
+  onEditarConexoes, onSyncMetricas, onEditarGasto, onEditarIdeias,
 }) {
   return (
     <div>
@@ -1080,6 +1081,7 @@ export default function ProjetoDetalhe({
           { id: "overview", l: "Visão geral" },
           { id: "oferta", l: "Gestão de oferta" },
           { id: "estruturas", l: "Estruturas" },
+          { id: "ideias", l: "Ideias" },
           { id: "anuncios", l: "Desempenho" },
           { id: "conexoes", l: "Conexões" },
         ].map((t) => (
@@ -1096,6 +1098,7 @@ export default function ProjetoDetalhe({
       {aba === "overview"  && <ProjetoOverview projeto={projeto} />}
       {aba === "oferta"    && <GestaoOferta projeto={projeto} userById={userById} atividade={atividade} onEditarPersona={onEditarPersona} onEditarOferta={onEditarOferta} />}
       {aba === "estruturas"&& <EstruturasTab projeto={projeto} onEditarEstrutura={onEditarEstrutura} />}
+      {aba === "ideias"    && <IdeiasProjeto projeto={projeto} onSalvar={onEditarIdeias} />}
       {aba === "anuncios"  && <AnunciosTab projeto={projeto} onRegistrar={onRegistrar} naoAtribuidos={naoAtribuidos} onAtribuir={onAtribuir} onSyncMetricas={onSyncMetricas} onEditarGasto={onEditarGasto} />}
       {aba === "conexoes"  && <ConexoesTab projeto={projeto} onSalvar={onEditarConexoes} />}
     </div>
