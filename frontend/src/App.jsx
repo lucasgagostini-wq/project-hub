@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import {
   IconDeviceDesktop as Monitor,
   IconDeviceMobile as Smartphone,
+  IconMoon as MoonIcon,
+  IconSun as SunIcon,
 } from "@tabler/icons-react";
 
-import { T, fontBody, GLOBAL_STYLE } from "./lib/theme";
+import { T, fontBody, buildGlobalStyle, applyTheme, getThemeMode } from "./lib/theme";
 import { MobileCtx } from "./lib/context";
 import { supabase, isMockMode } from "./lib/supabase";
 import {
@@ -71,6 +73,14 @@ export default function App() {
   const [projAtivo, setProjAtivo]   = useState(null);
   const [abaProjeto, setAbaProjeto] = useState("resumo");
   const [novoOpen, setNovoOpen]     = useState(false);
+
+  // ── Tema (claro / escuro) ────────────────────────────────────────────
+  const [themeMode, setThemeMode] = useState(getThemeMode());
+  const toggleTheme = () => {
+    const next = themeMode === "dark" ? "light" : "dark";
+    applyTheme(next);     // muta o T compartilhado + persiste
+    setThemeMode(next);   // força o re-render que repinta todo o app
+  };
 
   // ── Data ────────────────────────────────────────────────────────────
   const [projetos, setProjetos]           = useState(isMockMode ? loadLocal("ph_projetos", MOCK_PROJETOS) : []);
@@ -172,7 +182,7 @@ export default function App() {
   if (authLoading) {
     return (
       <>
-        <style>{GLOBAL_STYLE}</style>
+        <style>{buildGlobalStyle()}</style>
         <div className="grid-bg" style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           minHeight: "100vh", color: T.muted, fontSize: 14,
@@ -187,7 +197,7 @@ export default function App() {
   if (!logado) {
     return (
       <>
-        <style>{GLOBAL_STYLE}</style>
+        <style>{buildGlobalStyle()}</style>
         <Login
           usuarios={usuarios}
           onEntrar={handleEntrar}
@@ -210,7 +220,32 @@ export default function App() {
           color: T.ink,
         }}
       >
-        <style>{GLOBAL_STYLE}</style>
+        <style>{buildGlobalStyle()}</style>
+
+        {/* ── Alternador de tema (discreto, canto inferior-direito) ── */}
+        <button
+          onClick={toggleTheme}
+          title={themeMode === "dark" ? "Tema claro" : "Tema escuro"}
+          aria-label={themeMode === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
+          style={{
+            position: "fixed",
+            right: 18,
+            bottom: isMobile ? 104 : 22,
+            zIndex: 40,
+            width: 40,
+            height: 40,
+            borderRadius: 999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: T.surface,
+            color: T.muted,
+            border: `1px solid ${T.border}`,
+            boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
+          }}
+        >
+          {themeMode === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+        </button>
 
         {/* ── Layout chrome ── */}
         {isMobile ? (
