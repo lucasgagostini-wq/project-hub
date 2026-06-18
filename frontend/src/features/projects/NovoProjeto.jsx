@@ -116,10 +116,17 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
       if (novosLinks.length) setLinksTipo(novosLinks);
       setCloneTynk(d.tynk || null);
       const ref = d.tynk?.domain ? ` (projeto Tynk: ${d.tynk.domain})` : "";
-      setCloneMsg({
-        tipo: "ok",
-        texto: `Página clonada no Tynk ✓${ref}. Preencha a oferta/persona abaixo e clique em Criar projeto.`,
-      });
+      if (d.extracao === "vazia") {
+        setCloneMsg({
+          tipo: "aviso",
+          texto: `Página clonada no Tynk ✓${ref}. A IA não conseguiu extrair os campos (página pode exigir login, ou tente novamente). Preencha manualmente abaixo.`,
+        });
+      } else {
+        setCloneMsg({
+          tipo: "ok",
+          texto: `Página clonada no Tynk ✓${ref}. Preencha a oferta/persona abaixo e clique em Criar projeto.`,
+        });
+      }
     } catch (e) {
       setCloneMsg({ tipo: "erro", texto: e.message || "Não foi possível clonar a oferta." });
     } finally {
@@ -154,7 +161,7 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
       } : null,
       faturamento: 0, lucro: 0, gastoAds: 0, tempoOnline: 0, escala: 0,
       criativos: [], estruturas: {}, timeline: [],
-      ...(cloneTynk ? { tynk: cloneTynk } : {}),
+      ...(cloneTynk ? { tynk: { ...cloneTynk, ...(snap ? { snapshot: snap } : {}) } } : {}),
     };
     await onCriar?.(payload);
     setSubmitting(false);
@@ -214,8 +221,8 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
 
           {cloneMsg && (
             <div style={{ fontSize: 12.5, fontWeight: 500, padding: "9px 12px", borderRadius: 9,
-              color: cloneMsg.tipo === "ok" ? T.pos : T.neg,
-              background: cloneMsg.tipo === "ok" ? T.posBg : T.negBg }}>
+              color: cloneMsg.tipo === "ok" ? T.pos : cloneMsg.tipo === "aviso" ? "#B45309" : T.neg,
+              background: cloneMsg.tipo === "ok" ? T.posBg : cloneMsg.tipo === "aviso" ? "#FEF3C7" : T.negBg }}>
               {cloneMsg.texto}
             </div>
           )}

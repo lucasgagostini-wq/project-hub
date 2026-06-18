@@ -92,6 +92,12 @@ module.exports = async (req, res) => {
   const { tynk, links } = cloneRes.value;
   const ex = extractRes.status === "fulfilled" && extractRes.value ? extractRes.value : {};
 
+  // Indica se a extração funcionou: "ok" = campos preenchidos, "vazia" = IA não extraiu nada, "sem_ia" = key não configurada.
+  const KEY_FIELDS = ["oferta", "publico", "preco", "nome"];
+  const extracao = !process.env.OPENROUTER_API_KEY ? "sem_ia"
+    : KEY_FIELDS.some((k) => ex[k]) ? "ok"
+    : "vazia";
+
   // resposta normalizada para o frontend (contrato de frontend/src/lib/api/clone.js)
   return res.status(200).json({
     nome: ex.nome || tynk.title || nome || null,
@@ -104,5 +110,6 @@ module.exports = async (req, res) => {
     ...(ex.persona ? { persona: ex.persona } : {}),
     tynk,
     links,
+    extracao,
   });
 };

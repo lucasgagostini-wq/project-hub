@@ -144,7 +144,7 @@ async function extractOfferFromUrl(pageUrl) {
     }
     return normalize(parsed);
   })().catch(() => ({}));
-  const guard = new Promise((resolve) => setTimeout(() => resolve({}), 40000));
+  const guard = new Promise((resolve) => setTimeout(() => resolve({}), 48000));
   return Promise.race([work, guard]);
 }
 

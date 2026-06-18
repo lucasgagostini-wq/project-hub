@@ -19,6 +19,7 @@ import { listTasks, createTask, updateTask } from "./lib/api/tasks";
 import { listMeetings } from "./lib/api/meetings";
 import { logActivity, listActivity } from "./lib/api/activity";
 import { listIdeas, createIdea, updateIdea, deleteIdea } from "./lib/api/ideas";
+import { gerarSnapshot } from "./lib/api/clone";
 
 import Login             from "./features/auth/Login";
 import Sidebar           from "./features/layout/Sidebar";
@@ -390,6 +391,16 @@ export default function App() {
                 );
                 if (!isMockMode) await updateProject(projeto.id, { ideias }).catch(console.error);
                 if (label) registrar(projeto.id, label);
+              }}
+              onGerarSnapshot={async () => {
+                const url = projeto.tynk?.sourceUrl;
+                if (!url) throw new Error("URL da oferta não encontrada.");
+                const snap = await gerarSnapshot({ url, projectId: projeto.id });
+                const tynkUpdated = { ...projeto.tynk, snapshot: snap };
+                setProjetos((ps) =>
+                  ps.map((p) => (p.id === projeto.id ? { ...p, tynk: tynkUpdated } : p))
+                );
+                if (!isMockMode) await updateProject(projeto.id, { tynk: tynkUpdated }).catch(console.error);
               }}
             />
           ) : (

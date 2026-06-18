@@ -22,6 +22,7 @@ import {
   IconCircleCheck as CircleCheck,
   IconExternalLink as ExternalLink,
   IconRefresh as Refresh,
+  IconDownload as Download,
 } from "@tabler/icons-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -135,7 +136,10 @@ function PreviaOferta({ projeto, est, onFechar }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Card de informações da clonagem (Tynk)
 // ─────────────────────────────────────────────────────────────────────────────
-function TynkInfoCard({ tynk }) {
+function TynkInfoCard({ tynk, onGerarSnapshot }) {
+  const [snapping, setSnapping] = useState(false);
+  const [snapErr, setSnapErr] = useState(null);
+
   const fmtData = (s) =>
     s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
   const status = tynk.isPublished
@@ -159,6 +163,20 @@ function TynkInfoCard({ tynk }) {
       </a>
     ) : null;
 
+  const snap = tynk.snapshot;
+
+  const handleGerarSnapshot = async () => {
+    if (snapping || !onGerarSnapshot) return;
+    setSnapping(true); setSnapErr(null);
+    try {
+      await onGerarSnapshot();
+    } catch (e) {
+      setSnapErr(e.message || "Não foi possível gerar o preview.");
+    } finally {
+      setSnapping(false);
+    }
+  };
+
   return (
     <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
@@ -178,11 +196,35 @@ function TynkInfoCard({ tynk }) {
         <Linha label="Tags" valor={Array.isArray(tynk.tags) && tynk.tags.length ? tynk.tags.join(", ") : null} />
         <Linha label="Página original" valor={tynk.sourceUrl} />
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap", alignItems: "center" }}>
         <Btn href={tynk.pageUrl}>Ver página</Btn>
         <Btn href={tynk.editUrl}>Editar no Tynk</Btn>
         <Btn href={tynk.sourceUrl}>Página original</Btn>
+
+        {/* Preview da oferta — persiste após salvar o projeto */}
+        {snap?.previewUrl ? (
+          <>
+            <a href={snap.previewUrl} target="_blank" rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600,
+                color: "#fff", border: "none", background: T.primary, borderRadius: 9, padding: "7px 12px", textDecoration: "none" }}>
+              <Eye size={13} /> Ver preview
+            </a>
+            <a href={snap.downloadUrl}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600,
+                color: T.primaryText, border: `1px solid ${T.border}`, background: T.surface, borderRadius: 9, padding: "7px 12px", textDecoration: "none" }}>
+              <Download size={13} /> Baixar .html
+            </a>
+          </>
+        ) : tynk.sourceUrl && onGerarSnapshot ? (
+          <button onClick={handleGerarSnapshot} disabled={snapping}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600,
+              color: T.primaryText, border: `1px solid ${T.border}`, background: T.surface, borderRadius: 9, padding: "7px 12px",
+              cursor: snapping ? "wait" : "pointer", opacity: snapping ? 0.7 : 1 }}>
+            <Eye size={13} /> {snapping ? "Gerando preview…" : "Gerar preview da oferta"}
+          </button>
+        ) : null}
       </div>
+      {snapErr && <div style={{ fontSize: 12, color: T.neg, marginTop: 8 }}>{snapErr}</div>}
     </section>
   );
 }
@@ -190,7 +232,7 @@ function TynkInfoCard({ tynk }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Aba Resumo
 // ─────────────────────────────────────────────────────────────────────────────
-function ResumoTab({ projeto }) {
+function ResumoTab({ projeto, onGerarSnapshot }) {
   const m = useMobile();
   const [previa, setPrevia] = useState(false);
   const est = projeto.estruturas || MOCK_ESTRUTURAS[projeto.id] || {};
@@ -224,7 +266,7 @@ function ResumoTab({ projeto }) {
         </div>
       </div>
 
-      {projeto.tynk && <TynkInfoCard tynk={projeto.tynk} />}
+      {projeto.tynk && <TynkInfoCard tynk={projeto.tynk} onGerarSnapshot={onGerarSnapshot} />}
 
       <div style={{ display: "grid", gridTemplateColumns: m ? "1fr 1fr" : "repeat(4,1fr)", gap: 12 }}>
         <MiniStat label="Faturamento" value={fmtBRL(projeto.faturamento || 0)} />
@@ -1058,7 +1100,7 @@ function ConexoesTab({ projeto, onSalvar }) {
 export default function ProjetoDetalhe({
   projeto, aba, setAba, onVoltar, userById, atividade = [],
   onEditarPersona, onEditarOferta, onRegistrar, naoAtribuidos = [], onAtribuir, onEditarEstrutura,
-  onEditarConexoes, onSyncMetricas, onEditarGasto, onEditarIdeias,
+  onEditarConexoes, onSyncMetricas, onEditarGasto, onEditarIdeias, onGerarSnapshot,
 }) {
   return (
     <div>
@@ -1094,7 +1136,7 @@ export default function ProjetoDetalhe({
         ))}
       </div>
 
-      {aba === "resumo"    && <ResumoTab projeto={projeto} />}
+      {aba === "resumo"    && <ResumoTab projeto={projeto} onGerarSnapshot={onGerarSnapshot} />}
       {aba === "overview"  && <ProjetoOverview projeto={projeto} />}
       {aba === "oferta"    && <GestaoOferta projeto={projeto} userById={userById} atividade={atividade} onEditarPersona={onEditarPersona} onEditarOferta={onEditarOferta} />}
       {aba === "estruturas"&& <EstruturasTab projeto={projeto} onEditarEstrutura={onEditarEstrutura} />}
