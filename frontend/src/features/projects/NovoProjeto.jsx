@@ -119,7 +119,7 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
       if (d.tynk?.import?.timedOut) {
         setCloneMsg({
           tipo: "aviso",
-          texto: `Projeto criado na Tynk${ref}, mas a importação da página demorou demais (página pesada) e segue processando no Tynk — confira em "Editar no Tynk" daqui a pouco. Use "Gerar preview" abaixo para visualizar a página agora.`,
+          texto: `Projeto criado na Tynk${ref}. A importação no Tynk demorou e segue processando lá — mas estamos gerando a preview da página automaticamente abaixo, você já vai poder ver e baixar aqui mesmo.`,
         });
       } else if (d.extracao === "vazia") {
         setCloneMsg({
@@ -132,6 +132,11 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
           texto: `Página clonada no Tynk ✓${ref}. Preencha a oferta/persona abaixo e clique em Criar projeto.`,
         });
       }
+
+      // Gera a preview da página AUTOMATICAMENTE (snapshot via Jina — rápido, ~10s, e
+      // independe da importação lenta do Tynk). Assim "Ver preview"/"Baixar .html"
+      // aparecem sozinhos, sem o usuário precisar clicar em nada.
+      if (d.tynk) gerarPreview();
     } catch (e) {
       setCloneMsg({ tipo: "erro", texto: e.message || "Não foi possível clonar a oferta." });
     } finally {
