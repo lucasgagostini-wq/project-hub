@@ -232,8 +232,10 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
             </div>
           )}
 
-          {/* Preview/Download da página (snapshot fiel, sem precisar logar no Tynk) */}
-          {cloneMsg?.tipo === "ok" && (
+          {/* Preview/Download da página (snapshot fiel, sem precisar logar no Tynk).
+              Mostra sempre que o projeto Tynk foi criado — inclusive quando a importação
+              demorou (tipo "aviso"), pois o snapshot é capturado via Jina, independente do Tynk. */}
+          {cloneTynk && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {!snap ? (
