@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   IconArrowLeft as ArrowLeft,
   IconPlus as Plus,
@@ -11,6 +11,8 @@ import {
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Eyebrow } from "../../components";
 import { clonarOferta, gerarSnapshot } from "../../lib/api/clone";
+import CloneProgress from "./CloneProgress";
+import { notifyStatus, pedirPermissaoNotify, avisarConcluido } from "../../lib/notify";
 
 const inputSt = {
   width: "100%",
@@ -72,6 +74,8 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
   const [snapping, setSnapping] = useState(false);
   const [snap, setSnap] = useState(null); // { previewUrl, downloadUrl }
   const [snapErr, setSnapErr] = useState(null);
+  const [notifQ, setNotifQ] = useState(false); // micro-prompt de notificação
+  const [snapJustSet, setSnapJustSet] = useState(false); // pulso no "Ver preview"
 
   const gerarPreview = async () => {
     if (snapping || !cloneUrl.trim()) return;
@@ -86,12 +90,22 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
     }
   };
 
+  // Notifica quando snap é setado (só se aba em segundo plano)
+  useEffect(() => {
+    if (!snap) return;
+    avisarConcluido("Project Hub", "Sua preview está pronta — clique em Ver preview.");
+    setSnapJustSet(true);
+    const t = setTimeout(() => setSnapJustSet(false), 2000);
+    return () => clearTimeout(t);
+  }, [snap]);
+
   const set = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const clonar = async () => {
     if (cloning) return;
     if (!cloneUrl.trim()) { setCloneMsg({ tipo: "erro", texto: "Cole a URL da página de vendas." }); return; }
     setCloning(true); setCloneMsg(null); setSnap(null); setSnapErr(null);
+    setNotifQ(notifyStatus() === "default");
     try {
       const d = await clonarOferta({ url: cloneUrl.trim(), nome: form.nome });
       setForm((f) => ({
@@ -214,60 +228,97 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 280px", minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 4 }}>URL da página de vendas</div>
-              <input value={cloneUrl} onChange={(e) => setCloneUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && clonar()}
-                placeholder="https://..." style={{ ...inputSt, marginTop: 0 }} />
-            </div>
-            <button onClick={clonar} disabled={cloning}
-              style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 18px", borderRadius: 10, border: "none",
-                background: cloning ? T.faint : T.primary, color: "#fff", fontSize: 13.5, fontWeight: 600,
-                cursor: cloning ? "wait" : "pointer", flexShrink: 0 }}>
-              <Copy size={15} /> {cloning ? "Clonando…" : "Clonar oferta"}
-            </button>
-          </div>
+          {/* Keyframe para o pulse no "Ver preview" */}
+          <style>{`
+            @keyframes ph-pulse-preview {
+              0%,100% { opacity:1; transform:scale(1); }
+              50% { opacity:.88; transform:scale(1.05); }
+            }
+            .ph-pulse { animation: ph-pulse-preview 0.55s ease-in-out 3; }
+          `}</style>
 
-          {cloneMsg && (
+          {/* URL input + botão — some enquanto está clonando/snapping */}
+          {!cloning && !snapping && (
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 4 }}>URL da página de vendas</div>
+                <input value={cloneUrl} onChange={(e) => setCloneUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && clonar()}
+                  placeholder="https://..." style={{ ...inputSt, marginTop: 0 }} />
+              </div>
+              <button onClick={clonar}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 18px", borderRadius: 10, border: "none",
+                  background: T.primary, color: "#fff", fontSize: 13.5, fontWeight: 600,
+                  cursor: "pointer", flexShrink: 0 }}>
+                <Copy size={15} /> Clonar oferta
+              </button>
+            </div>
+          )}
+
+          {/* Micro-prompt de notificação — aparece uma vez ao iniciar a clonagem */}
+          {notifQ && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5,
+              padding: "8px 12px", borderRadius: 9, background: "#FEF9C3", color: "#92400E",
+              border: "1px solid #FDE68A" }}>
+              <span>🔔 Avisar quando a preview ficar pronta?</span>
+              <button onClick={async () => { await pedirPermissaoNotify(); setNotifQ(false); }}
+                style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: "#D97706",
+                  color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                Ativar
+              </button>
+              <button onClick={() => setNotifQ(false)}
+                style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid #FDE68A",
+                  background: "transparent", color: "#92400E", fontSize: 12, cursor: "pointer" }}>
+                Agora não
+              </button>
+            </div>
+          )}
+
+          {/* Terminal de progresso — visível durante clone/snapshot e após concluído */}
+          {(cloning || snapping || !!snap || cloneMsg?.tipo === "erro") && (
+            <CloneProgress
+              cloning={cloning}
+              snapping={snapping}
+              done={!!snap}
+              error={snapErr || (cloneMsg?.tipo === "erro" ? cloneMsg.texto : null)}
+              sourceUrl={cloneUrl}
+            />
+          )}
+
+          {/* Mensagem de status (não-erro) após clone */}
+          {cloneMsg && cloneMsg.tipo !== "erro" && !cloning && (
             <div style={{ fontSize: 12.5, fontWeight: 500, padding: "9px 12px", borderRadius: 9,
-              color: cloneMsg.tipo === "ok" ? T.pos : cloneMsg.tipo === "aviso" ? "#B45309" : T.neg,
-              background: cloneMsg.tipo === "ok" ? T.posBg : cloneMsg.tipo === "aviso" ? "#FEF3C7" : T.negBg }}>
+              color: cloneMsg.tipo === "ok" ? T.pos : "#B45309",
+              background: cloneMsg.tipo === "ok" ? T.posBg : "#FEF3C7" }}>
               {cloneMsg.texto}
             </div>
           )}
 
-          {/* Preview/Download da página (snapshot fiel, sem precisar logar no Tynk).
-              Mostra sempre que o projeto Tynk foi criado — inclusive quando a importação
-              demorou (tipo "aviso"), pois o snapshot é capturado via Jina, independente do Tynk. */}
-          {cloneTynk && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {!snap ? (
-                  <button onClick={gerarPreview} disabled={snapping}
-                    style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 9,
-                      border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600,
-                      cursor: snapping ? "wait" : "pointer" }}>
-                    <Eye size={14} /> {snapping ? "Gerando preview…" : "Gerar preview da página"}
-                  </button>
-                ) : (
-                  <>
-                    <a href={snap.previewUrl} target="_blank" rel="noreferrer"
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none",
-                        background: T.primary, color: "#fff", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>
-                      <Eye size={14} /> Ver preview
-                    </a>
-                    <a href={snap.downloadUrl}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9,
-                        border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>
-                      <Download size={14} /> Baixar .html
-                    </a>
-                  </>
-                )}
-              </div>
-              {snapping && <div style={{ fontSize: 11.5, color: T.faint }}>Capturando a página (CSS + imagens)… pode levar alguns segundos.</div>}
-              {snapErr && <div style={{ fontSize: 12, color: T.neg }}>{snapErr}</div>}
+          {/* Preview / Download — aparece quando o snapshot está pronto */}
+          {cloneTynk && snap && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <a href={snap.previewUrl} target="_blank" rel="noreferrer"
+                key={snap.previewUrl}
+                className={snapJustSet ? "ph-pulse" : ""}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none",
+                  background: T.primary, color: "#fff", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>
+                <Eye size={14} /> Ver preview
+              </a>
+              <a href={snap.downloadUrl}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9,
+                  border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>
+                <Download size={14} /> Baixar .html
+              </a>
             </div>
+          )}
+
+          {/* Botão manual de gerar preview — só se Tynk criou mas snapshot falhou */}
+          {cloneTynk && !snap && !snapping && !cloning && snapErr && (
+            <button onClick={gerarPreview}
+              style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 9,
+                border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+              <Eye size={14} /> Tentar gerar preview novamente
+            </button>
           )}
         </section>
 
@@ -364,9 +415,11 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
             style={{ padding: "11px 22px", borderRadius: 11, border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 14, fontWeight: 500 }}>
             Cancelar
           </button>
-          <button onClick={submit} disabled={submitting}
-            style={{ padding: "11px 24px", borderRadius: 11, border: "none", background: T.primary, color: "#fff", fontSize: 14, fontWeight: 600, opacity: submitting ? 0.7 : 1 }}>
-            {submitting ? "Criando…" : "Criar projeto"}
+          <button onClick={submit} disabled={submitting || snapping}
+            title={snapping ? "Aguarde a preview ser gerada…" : undefined}
+            style={{ padding: "11px 24px", borderRadius: 11, border: "none", background: T.primary, color: "#fff", fontSize: 14, fontWeight: 600,
+              opacity: submitting || snapping ? 0.6 : 1, cursor: snapping ? "not-allowed" : "pointer" }}>
+            {submitting ? "Criando…" : snapping ? "Aguardando preview…" : "Criar projeto"}
           </button>
         </div>
       </div>
