@@ -191,7 +191,7 @@ function TynkInfoCard({ tynk, onGerarSnapshot }) {
         <Linha label="Project ID" valor={tynk.projectId} />
         <Linha label="Criado em" valor={fmtData(tynk.createdAt)} />
         <Linha label="Clonado em" valor={fmtData(tynk.clonadoEm)} />
-        <Linha label="Import" valor={tynk.import?.importId ? `${tynk.import.success ? "ok" : "falhou"} · ${tynk.import.importId}` : null} />
+        <Linha label="Import" valor={tynk.import?.timedOut ? "pendente (importação demorou — verifique no Tynk)" : tynk.import?.importId ? `${tynk.import.success ? "ok" : "falhou"} · ${tynk.import.importId}` : null} />
         <Linha label="Status marketplace" valor={tynk.marketplaceApprovalStatus} />
         <Linha label="Tags" valor={Array.isArray(tynk.tags) && tynk.tags.length ? tynk.tags.join(", ") : null} />
         <Linha label="Página original" valor={tynk.sourceUrl} />

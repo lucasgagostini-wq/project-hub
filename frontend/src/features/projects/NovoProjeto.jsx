@@ -116,7 +116,12 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
       if (novosLinks.length) setLinksTipo(novosLinks);
       setCloneTynk(d.tynk || null);
       const ref = d.tynk?.domain ? ` (projeto Tynk: ${d.tynk.domain})` : "";
-      if (d.extracao === "vazia") {
+      if (d.tynk?.import?.timedOut) {
+        setCloneMsg({
+          tipo: "aviso",
+          texto: `Projeto criado na Tynk${ref}, mas a importação da página demorou demais (página pesada) e segue processando no Tynk — confira em "Editar no Tynk" daqui a pouco. Use "Gerar preview" abaixo para visualizar a página agora.`,
+        });
+      } else if (d.extracao === "vazia") {
         setCloneMsg({
           tipo: "aviso",
           texto: `Página clonada no Tynk ✓${ref}. A IA não conseguiu extrair os campos (página pode exigir login, ou tente novamente). Preencha manualmente abaixo.`,
