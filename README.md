@@ -3,7 +3,11 @@
 Gestão de projetos e ofertas. Monorepo simples:
 
 - `frontend/` — app React + Vite (a interface; PWA instalável).
-- `backend/`  — API Node + TypeScript + Express + Prisma (esqueleto com endpoints stub).
+- `api/`      — funções serverless (Vercel): clone/snapshot/preview da oferta e webhook da Cakto.
+- `backend/`  — API Node + TypeScript + Express + Prisma (esqueleto stub; fora do caminho de produção).
+
+> **Arquitetura real** (Supabase + serverless, modos mock/real, segurança): ver [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+> **Plano de refatoração/otimização**: ver [`docs/superpowers/specs/2026-06-19-refatoracao-otimizacao-plano.md`](docs/superpowers/specs/2026-06-19-refatoracao-otimizacao-plano.md).
 
 ---
 
