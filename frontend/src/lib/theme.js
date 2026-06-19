@@ -87,11 +87,13 @@ export const fontDisplay =
 export const fontBody =
   "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif";
 
+// Aceita number | string | null/undefined sem quebrar (n.toLocaleString quebraria em null,
+// e em produção valores como faturamento podem vir nulos).
 export const fmtBRL = (n) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 export const fmtBRLc = (n) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // Estilo global — gerado a partir do T atual (chamar no render p/ refletir o tema).
 export function buildGlobalStyle() {
@@ -107,6 +109,16 @@ export function buildGlobalStyle() {
     transition: background-color .2s ease, color .2s ease;
   }
   button { cursor: pointer; font-family: inherit; }
+  /* Foco visível por teclado (a11y). !important nos campos vence o outline:none inline. */
+  :focus-visible { outline: 2px solid ${T.primary}; outline-offset: 2px; border-radius: 4px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid ${T.primary} !important; outline-offset: 1px; }
+  /* Respeita usuários que pedem menos animação (vestibular/acessibilidade). */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important; scroll-behavior: auto !important;
+    }
+  }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 8px; }

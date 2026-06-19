@@ -8,6 +8,7 @@ import {
 
 import { T, fontBody, buildGlobalStyle, applyTheme, getThemeMode } from "./lib/theme";
 import { MobileCtx } from "./lib/context";
+import { useEscape } from "./lib/hooks/useDismissable";
 import { supabase, isMockMode } from "./lib/supabase";
 import {
   MOCK_USERS, MOCK_PROJETOS, MOCK_ATIVIDADE, MOCK_TAREFAS,
@@ -107,6 +108,9 @@ export default function App() {
   // Memo: evita recriar o array filtrado de atividade a cada render do App (a lista do
   // projeto aberto só muda quando a atividade ou o projeto ativo mudam).
   const atividadeProj = useMemo(() => atividade.filter((a) => a.proj === projAtivo), [atividade, projAtivo]);
+
+  // Esc fecha o overlay de novo projeto (o backdrop já fecha no clique).
+  useEscape(novoOpen, () => { setNovoOpen(false); setNovoInicial(null); });
 
   // ── Boot do modo "time" (sem login): carrega os perfis e restaura o ator ──
   useEffect(() => {
@@ -509,6 +513,7 @@ export default function App() {
           >
             <div
               onClick={(e) => e.stopPropagation()}
+              role="dialog" aria-modal="true" aria-label="Novo projeto"
               style={{
                 background: T.surface, minHeight: "100vh", width: "100%",
                 maxWidth: 760, padding: "32px 32px 60px",

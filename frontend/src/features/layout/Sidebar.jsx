@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   IconHome as Home,
   IconLayoutKanban as FolderKanban,
@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar } from "../../components";
+import { useDismissable } from "../../lib/hooks/useDismissable";
 
 const NAV_ITENS = [
   { id: "home",      label: "Início",          icon: Home },
@@ -24,6 +25,8 @@ const NAV_ITENS = [
 
 export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar, onEditarPerfil, onSair }) {
   const [trocarOpen, setTrocarOpen] = useState(false);
+  const fecharMenu = useCallback(() => setTrocarOpen(false), []);
+  const menuRef = useDismissable(trocarOpen, fecharMenu);
   return (
     <aside style={{ width: 236, flexShrink: 0, background: T.surface, borderRight: `1px solid ${T.border}`, color: T.ink,
       padding: "24px 16px", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
@@ -49,9 +52,9 @@ export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar
         })}
       </nav>
 
-      <div style={{ marginTop: "auto", position: "relative" }}>
+      <div ref={menuRef} style={{ marginTop: "auto", position: "relative" }}>
         {trocarOpen && (
-          <div style={{ position: "absolute", bottom: 64, left: 0, right: 0, background: T.surface,
+          <div role="menu" aria-label="Trocar de perfil" style={{ position: "absolute", bottom: 64, left: 0, right: 0, background: T.surface,
             border: `1px solid ${T.border}`, borderRadius: 12, padding: 6, boxShadow: "0 8px 28px rgba(0,0,0,.10)" }}>
             {usuarios.map((u) => (
               <button key={u.id} onClick={() => { onTrocar(u); setTrocarOpen(false); }}
@@ -74,6 +77,7 @@ export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar
           </div>
         )}
         <button onClick={() => setTrocarOpen((o) => !o)}
+          aria-haspopup="true" aria-expanded={trocarOpen} aria-label="Menu do perfil"
           style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px",
             borderRadius: 12, border: `1px solid ${T.border}`, background: T.bg }}>
           <Avatar user={usuario} size={30} />

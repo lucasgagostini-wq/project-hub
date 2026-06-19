@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { IconX as X, IconCamera as Camera } from "@tabler/icons-react";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Avatar } from "../../components";
+import { useEscape } from "../../lib/hooks/useDismissable";
 
 const CORES = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6", "#6366F1"];
 
@@ -39,6 +40,7 @@ export default function MeuPerfil({ perfil, onSalvar, onFechar }) {
   const [avatar, setAvatar] = useState(perfil?.avatar || perfil?.avatar_url || null);
   const [salvando, setSalvando] = useState(false);
   const fileRef = useRef();
+  useEscape(true, onFechar); // Esc fecha o modal (o backdrop já fecha no clique)
 
   const escolherFoto = async (e) => {
     const f = e.target.files?.[0];
@@ -64,7 +66,7 @@ export default function MeuPerfil({ perfil, onSalvar, onFechar }) {
     <div onClick={onFechar}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.28)", backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 70 }}>
-      <div onClick={(e) => e.stopPropagation()}
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Meu perfil"
         style={{ background: T.surface, borderRadius: 18, padding: 26, width: "100%", maxWidth: 420,
           border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", fontFamily: fontBody, color: T.ink }}>
 

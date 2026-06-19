@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   IconTrendingUp as TrendingUp,
   IconTrendingDown as TrendingDown,
@@ -8,14 +8,19 @@ import {
 import { T, fontDisplay, fontBody } from "../lib/theme";
 
 export function Avatar({ user, size = 30 }) {
+  const foto = user?.avatar || user?.avatar_url;
+  // Se a imagem falhar ao carregar (data URL corrompida, URL morta), cai para as
+  // iniciais em vez de mostrar um ícone de imagem quebrada. Reseta ao trocar de foto.
+  const [imgErr, setImgErr] = useState(false);
+  useEffect(() => { setImgErr(false); }, [foto]);
   if (!user) return null;
-  const foto = user.avatar || user.avatar_url;
-  if (foto) {
+  if (foto && !imgErr) {
     return (
       <img
         src={foto}
         alt={user.nome || user.name || ""}
         title={user.nome || user.name}
+        onError={() => setImgErr(true)}
         style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", flexShrink: 0, display: "block" }}
       />
     );
