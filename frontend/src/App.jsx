@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import {
   IconDeviceDesktop as Monitor,
   IconDeviceMobile as Smartphone,
@@ -30,8 +30,10 @@ import CalendarioGeral   from "./features/calendar/CalendarioGeral";
 import TarefasGerais     from "./features/tasks/TarefasGerais";
 import Reunioes          from "./features/meetings/Reunioes";
 import Projetos          from "./features/projects/Projetos";
-import ProjetoDetalhe    from "./features/projects/ProjetoDetalhe";
-import NovoProjeto       from "./features/projects/NovoProjeto";
+// Code-splitting: ProjetoDetalhe (usa recharts/d3, pesado) e NovoProjeto só carregam
+// quando abertos — tira a biblioteca de gráficos do bundle inicial.
+const ProjetoDetalhe = lazy(() => import("./features/projects/ProjetoDetalhe"));
+const NovoProjeto    = lazy(() => import("./features/projects/NovoProjeto"));
 import IdeiasGerais      from "./features/ideas/IdeiasGerais";
 import MeuPerfil         from "./features/profile/MeuPerfil";
 
@@ -95,11 +97,16 @@ export default function App() {
   const [tarefas, setTarefas]             = useState(isMockMode ? MOCK_TAREFAS : []);
   const [reunioes, setReunioes]           = useState(isMockMode ? MOCK_REUNIOES : []);
   const [naoAtribuidos, setNaoAtribuidos] = useState(MOCK_NAO_ATRIBUIDOS);
+  const [loadErro, setLoadErro]           = useState(false); // alguma fonte falhou ao carregar
 
   // ── Responsive ──────────────────────────────────────────────────────
   const autoMobile = useIsMobile();
   const [previewMode, setPreviewMode] = useState("web");
   const isMobile = previewMode === "mobile" ? true : previewMode === "web" ? false : autoMobile;
+
+  // Memo: evita recriar o array filtrado de atividade a cada render do App (a lista do
+  // projeto aberto só muda quando a atividade ou o projeto ativo mudam).
+  const atividadeProj = useMemo(() => atividade.filter((a) => a.proj === projAtivo), [atividade, projAtivo]);
 
   // ── Boot do modo "time" (sem login): carrega os perfis e restaura o ator ──
   useEffect(() => {
@@ -130,14 +137,19 @@ export default function App() {
 
   // Carrega os dados COMPARTILHADOS (Supabase). Atividade vem do audit_log.
   async function carregarDados() {
-    const [projs, tasks, meetings, ideas, ativ] = await Promise.all([
+    // allSettled (não Promise.all): se uma fonte falhar (ex.: reuniões), as demais ainda
+    // carregam — antes, uma única falha derrubava o dashboard inteiro para uma tela em branco.
+    const results = await Promise.allSettled([
       listProjects(), listTasks(), listMeetings(), listIdeas(), listActivity(),
     ]);
-    setProjetos(projs);
-    setTarefas(tasks);
-    setReunioes(meetings);
-    setIdeias(ideas);
-    setAtividade(ativ);
+    const setters = [setProjetos, setTarefas, setReunioes, setIdeias, setAtividade];
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") setters[i](r.value);
+      else console.error("[carregarDados] fonte", i, r.reason);
+    });
+    const algumFalhou = results.some((r) => r.status === "rejected");
+    setLoadErro(algumFalhou);
+    return !algumFalhou;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────
@@ -320,6 +332,22 @@ export default function App() {
             width: "100%",
           }}
         >
+          {loadErro && (
+            <div role="alert" style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
+              background: T.negBg, color: T.neg, border: `1px solid ${T.border}`,
+              borderRadius: 12, padding: "11px 14px", marginBottom: 18, fontSize: 13,
+            }}>
+              <span>Não foi possível carregar alguns dados compartilhados.</span>
+              <button onClick={async () => { setLoadErro(false); await carregarDados(); }} style={{
+                border: "none", background: T.neg, color: "#fff", borderRadius: 8,
+                padding: "6px 12px", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+              }}>
+                Tentar de novo
+              </button>
+            </div>
+          )}
+          <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T.muted, fontSize: 13 }}>Carregando…</div>}>
           {projeto ? (
             <ProjetoDetalhe
               key={projeto.id}
@@ -328,7 +356,7 @@ export default function App() {
               setAba={setAbaProjeto}
               onVoltar={() => setProjAtivo(null)}
               userById={userById}
-              atividade={atividade.filter((a) => a.proj === projeto.id)}
+              atividade={atividadeProj}
               onRegistrar={(acao) => registrar(projeto.id, acao)}
               naoAtribuidos={naoAtribuidos}
               onAtribuir={(ad) => {
@@ -463,6 +491,7 @@ export default function App() {
               )}
             </>
           )}
+          </Suspense>
         </main>
 
         {/* ── Novo projeto overlay ── */}
@@ -486,6 +515,7 @@ export default function App() {
                 boxShadow: "0 24px 80px rgba(0,0,0,0.18)",
               }}
             >
+              <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T.muted }}>Carregando…</div>}>
               <NovoProjeto
                 inicial={novoInicial}
                 onVoltar={() => { setNovoOpen(false); setNovoInicial(null); }}
@@ -502,6 +532,7 @@ export default function App() {
                   abrirProjeto(projeto.id);
                 }}
               />
+              </Suspense>
             </div>
           </div>
         )}

@@ -15,32 +15,37 @@ const API_BASE =
   import.meta.env.VITE_API_BASE ??
   (import.meta.env.DEV ? "http://localhost:4000" : "");
 
-export async function clonarOferta({ url, nome }) {
-  const res = await fetch(`${API_BASE}/api/v1/clone`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, nome }),
-  });
+// POST JSON com tratamento de erro consistente. Distingue 3 casos:
+//   • falha de rede (fetch rejeita: servidor fora, sem internet, CORS) → mensagem clara;
+//   • resposta não-ok → usa o `detail` do corpo (ou o status);
+//   • sucesso → devolve o JSON.
+// Antes, cada função repetia esse bloco e a falha de rede vazava um "TypeError: Failed
+// to fetch" cru para a UI.
+async function postJson(endpoint, body, rotulo) {
+  let res;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão e tente de novo.");
+  }
   if (!res.ok) {
     let detalhe = "";
     try { detalhe = (await res.json()).detail || ""; } catch { detalhe = await res.text().catch(() => ""); }
-    throw new Error(detalhe || `Clonagem falhou (${res.status})`);
+    throw new Error(detalhe || `${rotulo} falhou (${res.status})`);
   }
   return res.json();
+}
+
+export async function clonarOferta({ url, nome }) {
+  return postJson(`${API_BASE}/api/v1/clone`, { url, nome }, "Clonagem");
 }
 
 // Gera um snapshot fiel da página (CSS/imagens inline) e hospeda no Storage.
 // Retorna { previewUrl, downloadUrl, meta } — preview abre sem login no Tynk.
 export async function gerarSnapshot({ url, projectId }) {
-  const res = await fetch(`${API_BASE}/api/v1/snapshot`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, projectId }),
-  });
-  if (!res.ok) {
-    let detalhe = "";
-    try { detalhe = (await res.json()).detail || ""; } catch { detalhe = await res.text().catch(() => ""); }
-    throw new Error(detalhe || `Snapshot falhou (${res.status})`);
-  }
-  return res.json();
+  return postJson(`${API_BASE}/api/v1/snapshot`, { url, projectId }, "Snapshot");
 }

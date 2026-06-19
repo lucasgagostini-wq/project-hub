@@ -48,7 +48,12 @@ export async function sincronizarMetricas(projeto) {
       // DEV: a ponte puxa a Cakto e soma só os pedidos dos produtos deste projeto.
       const produtos = normalizarProdutos(projeto.conexoes?.cakto?.produtos);
       const qs = produtos.length ? `?produtos=${encodeURIComponent(produtos.join(","))}` : "";
-      const res = await fetch(`${API_BASE}/api/v1/projects/${projeto.id}/metrics${qs}`);
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/api/v1/projects/${projeto.id}/metrics${qs}`);
+      } catch {
+        throw new Error("Não foi possível conectar à ponte de métricas (dev). Ela está rodando em :4000?");
+      }
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         throw new Error(`Falha ao buscar faturamento da Cakto (${res.status}) ${txt.slice(0, 120)}`);
