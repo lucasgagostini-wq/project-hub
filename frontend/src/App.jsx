@@ -6,7 +6,7 @@ import {
   IconSun as SunIcon,
 } from "./lib/icons";
 
-import { T, fontBody, buildGlobalStyle, applyTheme, getThemeMode } from "./lib/theme";
+import { T, fontBody, buildGlobalStyle, applyTheme, getThemeMode, glassBlur } from "./lib/theme";
 import { MobileCtx } from "./lib/context";
 import { useEscape } from "./lib/hooks/useDismissable";
 import { supabase, isMockMode } from "./lib/supabase";
@@ -515,9 +515,10 @@ export default function App() {
               onClick={(e) => e.stopPropagation()}
               role="dialog" aria-modal="true" aria-label="Novo projeto"
               style={{
-                background: T.surface, minHeight: "100vh", width: "100%",
+                background: T.glass, backdropFilter: glassBlur, WebkitBackdropFilter: glassBlur,
+                minHeight: "100vh", width: "100%",
                 maxWidth: 760, padding: "32px 32px 60px",
-                boxShadow: "0 24px 80px rgba(0,0,0,0.18)",
+                boxShadow: "0 24px 80px rgba(20,22,40,0.18)",
               }}
             >
               <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T.muted }}>Carregando…</div>}>
@@ -570,9 +571,9 @@ export default function App() {
             style={{
               width: 36, height: 36, borderRadius: 999, flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: T.surface, color: T.muted,
-              border: `1px solid ${T.border}`,
-              boxShadow: "0 6px 20px rgba(0,0,0,.12)",
+              background: T.glass, backdropFilter: glassBlur, WebkitBackdropFilter: glassBlur, color: T.muted,
+              border: `1px solid ${T.glassBorder}`,
+              boxShadow: "0 6px 20px rgba(20,22,40,.12)",
             }}
           >
             {themeMode === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
@@ -583,11 +584,11 @@ export default function App() {
             style={{
               display: "flex",
               gap: 2,
-              background: T.surface,
-              border: `1px solid ${T.border}`,
+              background: T.glass, backdropFilter: glassBlur, WebkitBackdropFilter: glassBlur,
+              border: `1px solid ${T.glassBorder}`,
               borderRadius: 999,
               padding: 3,
-              boxShadow: "0 6px 20px rgba(0,0,0,.12)",
+              boxShadow: "0 6px 20px rgba(20,22,40,.12)",
             }}
           >
           {[

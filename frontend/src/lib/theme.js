@@ -25,6 +25,11 @@ const LIGHT = {
   primary: "#0071E3",
   primaryBg: "rgba(0,113,227,0.10)",
   primaryText: "#0066CC",
+  // Vidro fosco (vibrancy) estilo macOS — painéis translúcidos sobre a aurora.
+  glass: "rgba(255,255,255,0.72)",
+  glassBorder: "rgba(255,255,255,0.7)",
+  glassInset: "inset 0 1px 0 rgba(255,255,255,0.65)",
+  glassShadow: "0 1px 2px rgba(22,24,40,0.05), 0 10px 34px rgba(22,24,40,0.10)",
 };
 
 const DARK = {
@@ -45,6 +50,11 @@ const DARK = {
   primary: "#3B82F6",
   primaryBg: "rgba(59,130,246,0.10)",
   primaryText: "#60A5FA",
+  // Vidro fosco (vibrancy) estilo macOS — painéis translúcidos sobre a aurora.
+  glass: "rgba(22,27,34,0.60)",
+  glassBorder: "rgba(255,255,255,0.08)",
+  glassInset: "inset 0 1px 0 rgba(255,255,255,0.06)",
+  glassShadow: "0 1px 2px rgba(0,0,0,0.5), 0 14px 44px rgba(0,0,0,0.55)",
 };
 
 export const PALETTES = { light: LIGHT, dark: DARK };
@@ -82,12 +92,29 @@ export function applyTheme(mode) {
 // Aplica o tema salvo já no load do módulo (antes do React renderizar) — sem flash.
 applyTheme(getThemeMode());
 
-// Fonte de display com personalidade (Space Grotesk) nos títulos/números — tira a "cara de
-// template" do sistema padrão. Cai para as fontes do SO se a web font não carregar.
+// Cara de macOS: usamos a própria fonte do sistema. Num Mac isso é SF Pro Display/Text
+// (idêntico aos apps nativos); em outros SOs cai para a fonte nativa local (Segoe/Roboto),
+// mantendo o "feel" nativo de cada plataforma.
 export const fontDisplay =
-  "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif";
+  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif";
 export const fontBody =
   "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif";
+
+// Blur do vidro (igual nos dois temas). saturate dá o realce de cor do vibrancy do macOS.
+export const glassBlur = "saturate(180%) blur(20px)";
+
+// Painel de vidro fosco (vibrancy macOS): fundo translúcido + blur + borda hairline +
+// realce interno no topo + sombra suave tingida — a aurora aparece por trás. Reutilizável:
+//   style={{ ...glassStyle(), borderRadius: 16, padding: 20 }}
+export function glassStyle() {
+  return {
+    background: T.glass,
+    backdropFilter: glassBlur,
+    WebkitBackdropFilter: glassBlur,
+    border: `1px solid ${T.glassBorder}`,
+    boxShadow: `${T.glassInset}, ${T.glassShadow}`,
+  };
+}
 
 // Aceita number | string | null/undefined sem quebrar (n.toLocaleString quebraria em null,
 // e em produção valores como faturamento podem vir nulos).
@@ -107,17 +134,22 @@ export function buildGlobalStyle() {
   const a3 = dark ? "rgba(13,148,136,0.14)"  : "rgba(13,148,136,0.07)";
   const vig = dark ? T.surface : "#FFFFFF";
   return `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   html, body { margin: 0; background: ${T.bg}; }
   body {
+    font-family: ${fontBody};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     color: ${T.ink};
     transition: background-color .2s ease, color .2s ease;
   }
-  button { cursor: pointer; font-family: inherit; }
+  /* Micro-interações estilo macOS: transição suave + "pressão" física no clique. */
+  button { cursor: pointer; font-family: inherit; transition: background-color .18s ease, box-shadow .18s ease, transform .08s ease, opacity .18s ease; }
+  button:active:not(:disabled) { transform: translateY(0.5px) scale(0.992); }
+  a { transition: opacity .18s ease, background-color .18s ease; }
   /* Foco visível por teclado (a11y). !important nos campos vence o outline:none inline. */
   :focus-visible { outline: 2px solid ${T.primary}; outline-offset: 2px; border-radius: 4px; }
   input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid ${T.primary} !important; outline-offset: 1px; }

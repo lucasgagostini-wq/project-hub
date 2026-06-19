@@ -27,7 +27,7 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { T, fontDisplay, fontBody, fmtBRL, fmtBRLc } from "../../lib/theme";
+import { T, fontDisplay, fontBody, fmtBRL, fmtBRLc, glassStyle } from "../../lib/theme";
 import {
   Kpi, Eyebrow, LinhaInfo, MiniStat, MiniEstrutura, Campo,
   CreativeThumb, StatusBadge, RoasTag, Avatar,
@@ -178,7 +178,7 @@ function TynkInfoCard({ tynk, onGerarSnapshot }) {
   };
 
   return (
-    <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+    <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
         <div style={{ width: 30, height: 30, borderRadius: 9, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Copy size={15} color="#fff" />
@@ -277,7 +277,7 @@ function ResumoTab({ projeto, onGerarSnapshot }) {
 
       {projeto.persona && (
         <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "1.3fr 1fr", gap: 14 }}>
-          <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+          <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
             <Eyebrow>A oferta</Eyebrow>
             <p style={{ fontSize: 14, lineHeight: 1.55, margin: "0 0 16px" }}>{projeto.oferta}</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
@@ -287,7 +287,7 @@ function ResumoTab({ projeto, onGerarSnapshot }) {
               <LinhaInfo label="Garantia" valor={est.venda?.garantia || projeto.garantia} />
             </div>
           </section>
-          <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+          <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
             <Eyebrow>Persona</Eyebrow>
             <div style={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: 15, marginBottom: 12 }}>{projeto.persona.nome}</div>
             <LinhaInfo label="Dor principal" valor={projeto.persona.dor} />
@@ -364,7 +364,7 @@ function CalendarioOferta({ projeto, userById }) {
   ];
   const dias = Array.from({ length: 30 }, (_, i) => i + 1);
   return (
-    <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+    <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
       <Eyebrow>Calendário da oferta — maio</Eyebrow>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 6, marginBottom: 16 }}>
         {dias.map((d) => {
@@ -409,7 +409,7 @@ function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEd
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       {/* Estruturação */}
-      <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+      <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
         <Eyebrow>Estruturação da oferta</Eyebrow>
         <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "1fr 1fr", gap: "16px 28px" }}>
           <Campo label="A oferta" valor={projeto.oferta} full />
@@ -431,7 +431,7 @@ function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEd
 
       {/* Persona */}
       {projeto.persona && (
-        <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+        <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <Eyebrow>Persona mapeada</Eyebrow>
             {!editPersona ? (
@@ -470,7 +470,7 @@ function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEd
       )}
 
       {/* Gráfico */}
-      <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+      <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 6 }}>
           <Eyebrow>Linha do tempo da oferta</Eyebrow>
           <div style={{ textAlign: "right" }}>
@@ -506,7 +506,7 @@ function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEd
 
       <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "1.2fr 1fr", gap: 22 }}>
         <CalendarioOferta projeto={projeto} userById={userById} />
-        <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+        <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
           <Eyebrow>Rastreamento de mudanças</Eyebrow>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {atividade.length === 0 && <span style={{ fontSize: 13, color: T.faint }}>Nenhuma alteração ainda.</span>}
@@ -554,7 +554,7 @@ function EstruturaSecao({ titulo, icon: Icon, campos, valores, onSalvar }) {
   const inputSt = { width: "100%", marginTop: 6, padding: "9px 11px", borderRadius: 9, border: `1px solid ${T.border}`, fontSize: 13, fontFamily: fontBody, outline: "none", background: T.surfaceAlt, color: T.ink };
 
   return (
-    <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+    <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <Icon size={16} color={T.ink} />
@@ -688,7 +688,7 @@ function ResumoIntegracoes({ projeto, onSyncMetricas, onEditarGasto }) {
     fontSize: 14, fontFamily: fontBody, outline: "none", background: T.surfaceAlt, color: T.ink };
 
   return (
-    <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+    <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
         <div>
           <Eyebrow style={{ marginBottom: 4 }}>Gasto × Faturamento</Eyebrow>
@@ -826,7 +826,7 @@ function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir, onS
         )}
       </div>
 
-      <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+      <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
         <Eyebrow>Desempenho por criativo</Eyebrow>
         {!utmfyOn ? (
           <div style={{ textAlign: "center", padding: "26px 0", color: T.faint, fontSize: 13 }}>Conecte o UTMfy para ver o desempenho dos criativos.</div>
@@ -865,7 +865,7 @@ function AnunciosTab({ projeto, onRegistrar, naoAtribuidos = [], onAtribuir, onS
       </section>
 
       {utmfyOn && naoAtribuidos.length > 0 && (
-        <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 22 }}>
+        <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
           <Eyebrow>Campanhas não atribuídas</Eyebrow>
           <p style={{ fontSize: 12.5, color: T.faint, margin: "-6px 0 16px" }}>O UTMfy trouxe estas campanhas sem projeto. Atribua ao projeto correto.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

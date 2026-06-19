@@ -5,7 +5,7 @@ import {
   IconPlayerPlay as Play,
   IconPhoto as ImageIcon,
 } from "../lib/icons";
-import { T, fontDisplay, fontBody } from "../lib/theme";
+import { T, fontDisplay, fontBody, glassStyle } from "../lib/theme";
 
 export function Avatar({ user, size = 30 }) {
   const foto = user?.avatar || user?.avatar_url;
@@ -56,7 +56,7 @@ export function Delta({ value, suffix = "" }) {
 
 export function Kpi({ label, value, hint, delta, icon: Icon, accent }) {
   return (
-    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ ...glassStyle(), borderRadius: 16, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 12.5, color: T.muted, letterSpacing: 0.2, fontWeight: 500 }}>{label}</span>
         {Icon && (
@@ -107,7 +107,7 @@ export function LinhaInfo({ label, valor }) {
 
 export function MiniStat({ label, value, sub }) {
   return (
-    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px 16px" }}>
+    <div style={{ ...glassStyle(), borderRadius: 14, padding: "14px 16px" }}>
       <div style={{ fontSize: 11.5, color: T.muted, fontWeight: 500 }}>{label}</div>
       <div style={{ fontFamily: fontDisplay, fontSize: 20, fontWeight: 600, fontVariantNumeric: "tabular-nums", marginTop: 4 }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: T.faint, marginTop: 2 }}>{sub}</div>}
@@ -117,7 +117,7 @@ export function MiniStat({ label, value, sub }) {
 
 export function MiniEstrutura({ icon: Icon, titulo, linhas }) {
   return (
-    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+    <div style={{ ...glassStyle(), borderRadius: 14, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <Icon size={15} color={T.ink} />
         <span style={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: 13.5 }}>{titulo}</span>

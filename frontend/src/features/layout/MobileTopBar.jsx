@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { IconTarget as Target, IconLogout as LogOut, IconUserCog as UserCog } from "../../lib/icons";
-import { T, fontDisplay } from "../../lib/theme";
+import { T, fontDisplay, glassBlur, glassStyle } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useDismissable } from "../../lib/hooks/useDismissable";
 
@@ -9,7 +9,8 @@ export default function MobileTopBar({ usuario, usuarios = [], onTrocar, onEdita
   const fecharMenu = useCallback(() => setAberto(false), []);
   const menuRef = useDismissable(aberto, fecharMenu);
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 30, background: T.surface, borderBottom: `1px solid ${T.border}`, color: T.ink,
+    <header style={{ position: "sticky", top: 0, zIndex: 30, background: T.glass, backdropFilter: glassBlur, WebkitBackdropFilter: glassBlur,
+      borderBottom: `1px solid ${T.glassBorder}`, color: T.ink,
       padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
         <div style={{ width: 28, height: 28, borderRadius: 8, background: T.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -23,8 +24,8 @@ export default function MobileTopBar({ usuario, usuarios = [], onTrocar, onEdita
           <Avatar user={usuario} size={32} />
         </button>
         {aberto && (
-          <div role="menu" aria-label="Trocar de perfil" style={{ position: "absolute", top: 42, right: 0, background: T.surface, border: `1px solid ${T.border}`,
-            borderRadius: 12, padding: 6, width: 170, boxShadow: "0 10px 30px rgba(0,0,0,.12)", zIndex: 40 }}>
+          <div role="menu" aria-label="Trocar de perfil" style={{ position: "absolute", top: 42, right: 0,
+            ...glassStyle(), borderRadius: 12, padding: 6, width: 170, zIndex: 40 }}>
             {usuarios.map((u) => (
               <button key={u.id} onClick={() => { onTrocar(u); setAberto(false); }}
                 style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 9px", borderRadius: 8, border: "none", background: "transparent", textAlign: "left", color: T.ink }}>

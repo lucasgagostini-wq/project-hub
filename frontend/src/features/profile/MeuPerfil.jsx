@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { IconX as X, IconCamera as Camera } from "../../lib/icons";
-import { T, fontDisplay, fontBody } from "../../lib/theme";
+import { T, fontDisplay, fontBody, glassStyle } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useEscape } from "../../lib/hooks/useDismissable";
 import { resizeImageToDataURL } from "../../lib/image";
@@ -49,8 +49,8 @@ export default function MeuPerfil({ perfil, onSalvar, onFechar }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.28)", backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 70 }}>
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Meu perfil"
-        style={{ background: T.surface, borderRadius: 18, padding: 26, width: "100%", maxWidth: 420,
-          border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", fontFamily: fontBody, color: T.ink }}>
+        style={{ ...glassStyle(), borderRadius: 18, padding: 26, width: "100%", maxWidth: 420,
+          boxShadow: `${T.glassInset}, 0 30px 90px rgba(0,0,0,0.30)`, fontFamily: fontBody, color: T.ink }}>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <h2 style={{ fontFamily: fontDisplay, fontSize: 18, fontWeight: 700, margin: 0 }}>Meu perfil</h2>

@@ -9,7 +9,7 @@ import {
   IconPhoto as ImageIcon,
   IconChevronRight as ChevronRight,
 } from "../../lib/icons";
-import { T, fontDisplay, fontBody, fmtBRL } from "../../lib/theme";
+import { T, fontDisplay, fontBody, fmtBRL, glassStyle } from "../../lib/theme";
 import { Kpi, Eyebrow, Delta } from "../../components";
 import { useMobile } from "../../lib/context";
 import { PageHeader } from "../../components";
@@ -30,7 +30,7 @@ function CardProjeto({ p, onAbrir, onSetImagem }) {
   };
   return (
     <div onClick={() => onAbrir(p.id)}
-      style={{ cursor: "pointer", textAlign: "left", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      style={{ cursor: "pointer", textAlign: "left", ...glassStyle(), borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <div style={{ position: "relative", height: 116, background: p.imagem ? "#000" : T.bg, borderBottom: `1px solid ${T.hair}` }}>
         <input ref={fileRef} type="file" accept="image/*" onChange={escolherImagem} style={{ display: "none" }} />
         {p.imagem ? (

@@ -8,7 +8,7 @@ import {
   IconEye as Eye,
   IconDownload as Download,
 } from "../../lib/icons";
-import { T, fontDisplay, fontBody } from "../../lib/theme";
+import { T, fontDisplay, fontBody, glassStyle } from "../../lib/theme";
 import { Eyebrow } from "../../components";
 import { clonarOferta, gerarSnapshot } from "../../lib/api/clone";
 import CloneProgress from "./CloneProgress";
@@ -203,8 +203,7 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
   };
 
   const secSt = {
-    background: T.surface,
-    border: `1px solid ${T.border}`,
+    ...glassStyle(),
     borderRadius: 16,
     padding: 22,
     display: "flex",

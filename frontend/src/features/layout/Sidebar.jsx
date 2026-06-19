@@ -10,7 +10,7 @@ import {
   IconBulb as Bulb,
   IconUserCog as UserCog,
 } from "../../lib/icons";
-import { T, fontDisplay } from "../../lib/theme";
+import { T, fontDisplay, glassBlur, glassStyle } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useDismissable } from "../../lib/hooks/useDismissable";
 
@@ -28,7 +28,8 @@ export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar
   const fecharMenu = useCallback(() => setTrocarOpen(false), []);
   const menuRef = useDismissable(trocarOpen, fecharMenu);
   return (
-    <aside style={{ width: 236, flexShrink: 0, background: T.surface, borderRight: `1px solid ${T.border}`, color: T.ink,
+    <aside style={{ width: 236, flexShrink: 0, background: T.glass, backdropFilter: glassBlur, WebkitBackdropFilter: glassBlur,
+      borderRight: `1px solid ${T.glassBorder}`, color: T.ink,
       padding: "24px 16px", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
 
       <div style={{ padding: "0 8px 22px", display: "flex", alignItems: "center", gap: 9 }}>
@@ -54,8 +55,8 @@ export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar
 
       <div ref={menuRef} style={{ marginTop: "auto", position: "relative" }}>
         {trocarOpen && (
-          <div role="menu" aria-label="Trocar de perfil" style={{ position: "absolute", bottom: 64, left: 0, right: 0, background: T.surface,
-            border: `1px solid ${T.border}`, borderRadius: 12, padding: 6, boxShadow: "0 8px 28px rgba(0,0,0,.10)" }}>
+          <div role="menu" aria-label="Trocar de perfil" style={{ position: "absolute", bottom: 64, left: 0, right: 0,
+            ...glassStyle(), borderRadius: 12, padding: 6 }}>
             {usuarios.map((u) => (
               <button key={u.id} onClick={() => { onTrocar(u); setTrocarOpen(false); }}
                 style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 9px",
