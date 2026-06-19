@@ -13,16 +13,20 @@ import { T, fontDisplay, fontBody, fmtBRL } from "../../lib/theme";
 import { Kpi, Eyebrow, Delta } from "../../components";
 import { useMobile } from "../../lib/context";
 import { PageHeader } from "../../components";
+import { resizeImageToDataURL } from "../../lib/image";
 
 function CardProjeto({ p, onAbrir, onSetImagem }) {
   const margem = p.faturamento ? Math.round((p.lucro / p.faturamento) * 100) : 0;
   const fileRef = useRef(null);
-  const escolherImagem = (e) => {
+  const escolherImagem = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => onSetImagem?.(p.id, reader.result);
-    reader.readAsDataURL(file);
+    try {
+      // Redimensiona antes de salvar — evita guardar base64 de vários MB no estado/Storage.
+      const dataUrl = await resizeImageToDataURL(file, 600, 0.82);
+      onSetImagem?.(p.id, dataUrl);
+    } catch { /* leitura inválida — ignora */ }
+    finally { e.target.value = ""; } // permite re-selecionar o mesmo arquivo
   };
   return (
     <div onClick={() => onAbrir(p.id)}

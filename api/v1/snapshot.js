@@ -6,6 +6,7 @@
 // Env (server-side): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (já existem na Vercel).
 
 const { captureSnapshot } = require("../_lib/snapshot.js");
+const { assertPublicHttpUrl } = require("../_lib/url-guard.js");
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
@@ -57,6 +58,9 @@ module.exports = async (req, res) => {
   const url = body?.url;
   const projectId = body?.projectId;
   if (!url) return res.status(400).json({ error: "URL_REQUIRED", detail: "Informe a URL da página." });
+  // Anti-SSRF: rejeita protocolos não-http(s) e hosts internos/privados antes de capturar.
+  try { assertPublicHttpUrl(url); }
+  catch (e) { return res.status(e.status || 400).json({ error: "URL_NOT_ALLOWED", detail: e.message }); }
 
   // 1) captura o snapshot
   const snap = await captureSnapshot(url);

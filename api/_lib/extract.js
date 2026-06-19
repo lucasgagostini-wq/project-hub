@@ -5,6 +5,8 @@
 // Filosofia: best-effort e NUNCA lança. Qualquer falha (sem key, fetch, 429, timeout, JSON inválido)
 // devolve {} (ou objeto parcial), e quem chama segue sem os campos — a clonagem nunca quebra por isso.
 
+const { assertPublicHttpUrl } = require("./url-guard.js");
+
 const NICHOS = [
   "Saúde e Bem-Estar", "Finanças", "Negócios", "Beleza",
   "Relacionamentos", "Educação", "Tecnologia", "Entretenimento",
@@ -132,6 +134,7 @@ function normalize(obj) {
 // Teto global de 40s: se estourar (ex: free tier lento), resolve {} e a clonagem segue sem os campos.
 async function extractOfferFromUrl(pageUrl) {
   if (!process.env.OPENROUTER_API_KEY) return {};
+  try { assertPublicHttpUrl(pageUrl); } catch { return {}; } // anti-SSRF (best-effort, não lança)
   const work = (async () => {
     const text = await fetchPageText(pageUrl);
     if (!text || text.length < 50) return {};
@@ -144,8 +147,9 @@ async function extractOfferFromUrl(pageUrl) {
     }
     return normalize(parsed);
   })().catch(() => ({}));
-  const guard = new Promise((resolve) => setTimeout(() => resolve({}), 48000));
-  return Promise.race([work, guard]);
+  let guardTimer;
+  const guard = new Promise((resolve) => { guardTimer = setTimeout(() => resolve({}), 48000); });
+  return Promise.race([work, guard]).finally(() => clearTimeout(guardTimer));
 }
 
 module.exports = { extractOfferFromUrl };

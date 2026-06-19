@@ -5,6 +5,18 @@
 //   SUPABASE_URL                — https://<id>.supabase.co
 //   SUPABASE_SERVICE_ROLE_KEY   — service role key (bypassa RLS)
 
+const crypto = require("crypto");
+
+// Comparação de segredo em tempo constante (evita timing attack que vaza o segredo char a
+// char). timingSafeEqual exige buffers do mesmo tamanho — daí a checagem de length antes.
+function secretOk(provided, expected) {
+  if (!provided || !expected) return false;
+  const a = Buffer.from(String(provided));
+  const b = Buffer.from(String(expected));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -20,8 +32,8 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "server_misconfigured" });
   }
 
-  // valida o secret enviado no corpo do webhook
-  if (!body || body.secret !== expectedSecret) {
+  // valida o secret enviado no corpo do webhook (comparação em tempo constante)
+  if (!body || !secretOk(body.secret, expectedSecret)) {
     return res.status(401).json({ error: "invalid_secret" });
   }
 
@@ -46,8 +58,9 @@ module.exports = async (req, res) => {
     const data = await resp.json().catch(() => ({}));
 
     if (!resp.ok) {
+      // Detalhe fica só no log do servidor — não vaza schema/constraints do Postgres ao cliente.
       console.error("[cakto-webhook] RPC falhou:", resp.status, data);
-      return res.status(502).json({ error: "supabase_rpc_failed", detail: data });
+      return res.status(502).json({ error: "supabase_rpc_failed" });
     }
 
     return res.status(200).json({ ok: true, result: data });

@@ -3,28 +3,9 @@ import { IconX as X, IconCamera as Camera } from "@tabler/icons-react";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useEscape } from "../../lib/hooks/useDismissable";
+import { resizeImageToDataURL } from "../../lib/image";
 
 const CORES = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6", "#6366F1"];
-
-// Redimensiona a imagem (cover, quadrada) e devolve um data URL JPEG leve.
-function resizeToDataURL(file, side = 256) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = side; canvas.height = side;
-      const ctx = canvas.getContext("2d");
-      const src = Math.min(img.width, img.height);
-      const sx = (img.width - src) / 2, sy = (img.height - src) / 2;
-      ctx.drawImage(img, sx, sy, src, src, 0, 0, side, side);
-      URL.revokeObjectURL(url); // libera o blob — sem isso, cada foto escolhida vaza memória
-      resolve(canvas.toDataURL("image/jpeg", 0.85));
-    };
-    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
-    img.src = url;
-  });
-}
 
 function inicialDe(nome) {
   const parts = (nome || "").trim().split(/\s+/).filter(Boolean);
@@ -45,7 +26,8 @@ export default function MeuPerfil({ perfil, onSalvar, onFechar }) {
   const escolherFoto = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    try { setAvatar(await resizeToDataURL(f)); } catch { /* ignora */ }
+    try { setAvatar(await resizeImageToDataURL(f)); } catch { /* ignora */ }
+    finally { e.target.value = ""; } // permite re-selecionar o mesmo arquivo
   };
 
   const salvar = async () => {

@@ -9,6 +9,11 @@
 const MAX_INLINE = 4 * 1024 * 1024; // acima disso, redireciona em vez de servir inline
 
 module.exports = async (req, res) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.statusCode = 405;
+    res.setHeader("Allow", "GET, HEAD");
+    return res.end("method_not_allowed");
+  }
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const id = String((req.query && req.query.id) || "").replace(/[^a-zA-Z0-9_-]/g, "");
   if (!SUPABASE_URL || !id) {
@@ -32,6 +37,13 @@ module.exports = async (req, res) => {
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=3600");
+    // SEGURANÇA: o snapshot é HTML de terceiros servido no NOSSO domínio. `sandbox` faz o
+    // navegador tratá-lo como origem opaca e bloqueia TODO script (inclusive handlers inline
+    // como onerror= e URLs javascript:), neutralizando XSS armazenado sem afetar o CSS/imagens
+    // estáticos. nosniff impede MIME sniffing; no-referrer evita vazar a URL de origem.
+    res.setHeader("Content-Security-Policy", "sandbox");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "no-referrer");
     return res.end(html);
   } catch (e) {
     res.statusCode = 502;

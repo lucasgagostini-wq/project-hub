@@ -13,6 +13,7 @@
 //   OPENROUTER_MODEL              — opcional; default um modelo :free
 
 const { extractOfferFromUrl } = require("../_lib/extract.js");
+const { assertPublicHttpUrl } = require("../_lib/url-guard.js");
 
 function httpErr(status, body) { const e = new Error(body.error || "erro"); e.status = status; e.body = body; return e; }
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
@@ -108,6 +109,9 @@ module.exports = async (req, res) => {
   if (!pageUrl) {
     return res.status(400).json({ error: "URL_REQUIRED", detail: "Informe a URL da página de vendas." });
   }
+  // Anti-SSRF: rejeita protocolos não-http(s) e hosts internos/privados antes de buscar.
+  try { assertPublicHttpUrl(pageUrl); }
+  catch (e) { return res.status(e.status || 400).json({ error: "URL_NOT_ALLOWED", detail: e.message }); }
 
   // Clone (Tynk) e extração (IA) rodam em paralelo — são independentes.
   const [cloneRes, extractRes] = await Promise.allSettled([
