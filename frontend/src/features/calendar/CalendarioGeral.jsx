@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { IconCalendar as CalendarDays, IconWorld as Globe } from "@tabler/icons-react";
+import { IconCalendar as CalendarDays, IconWorld as Globe } from "../../lib/icons";
 import { T } from "../../lib/theme";
 import { Avatar, ChipFiltro } from "../../components";
 import { PageHeader } from "../../components";

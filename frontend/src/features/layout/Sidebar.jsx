@@ -9,7 +9,7 @@ import {
   IconTarget as Target,
   IconBulb as Bulb,
   IconUserCog as UserCog,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useDismissable } from "../../lib/hooks/useDismissable";

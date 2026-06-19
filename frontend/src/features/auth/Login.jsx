@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { IconTarget as Target } from "@tabler/icons-react";
+import { IconTarget as Target } from "../../lib/icons";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { MOCK_USERS } from "../../lib/api/mockData";

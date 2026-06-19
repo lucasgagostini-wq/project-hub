@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { IconTarget as Target, IconLogout as LogOut, IconUserCog as UserCog } from "@tabler/icons-react";
+import { IconTarget as Target, IconLogout as LogOut, IconUserCog as UserCog } from "../../lib/icons";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useDismissable } from "../../lib/hooks/useDismissable";

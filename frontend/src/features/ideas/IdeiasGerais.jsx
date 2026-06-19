@@ -4,7 +4,7 @@ import {
   IconPlus as Plus,
   IconTrash as Trash,
   IconRocket as Rocket,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import { T, fontDisplay } from "../../lib/theme";
 import { PageHeader, Eyebrow } from "../../components";
 import { useMobile } from "../../lib/context";

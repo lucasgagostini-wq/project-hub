@@ -6,7 +6,7 @@ import {
   IconListCheck as ListTodo,
   IconUsers as Users2,
   IconBulb as Bulb,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import { T } from "../../lib/theme";
 
 const NAV_ITENS = [

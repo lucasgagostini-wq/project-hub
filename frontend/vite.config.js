@@ -14,7 +14,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
           if (id.includes('recharts') || id.includes('d3-') || id.includes('internmap') || id.includes('victory-vendor')) return 'charts';
-          if (id.includes('@tabler')) return 'icons';
+          if (id.includes('@phosphor') || id.includes('@tabler')) return 'icons';
           if (id.includes('@supabase')) return 'supabase';
           if (id.includes('react-dom') || id.includes('/scheduler/') || id.includes('react/jsx-runtime')) return 'react-vendor';
         },

@@ -23,7 +23,7 @@ import {
   IconExternalLink as ExternalLink,
   IconRefresh as Refresh,
   IconDownload as Download,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";

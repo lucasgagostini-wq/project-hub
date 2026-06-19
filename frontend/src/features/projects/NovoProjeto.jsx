@@ -7,7 +7,7 @@ import {
   IconWand as Wand,
   IconEye as Eye,
   IconDownload as Download,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Eyebrow } from "../../components";
 import { clonarOferta, gerarSnapshot } from "../../lib/api/clone";

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { IconX as X, IconCamera as Camera } from "@tabler/icons-react";
+import { IconX as X, IconCamera as Camera } from "../../lib/icons";
 import { T, fontDisplay, fontBody } from "../../lib/theme";
 import { Avatar } from "../../components";
 import { useEscape } from "../../lib/hooks/useDismissable";

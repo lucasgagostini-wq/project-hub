@@ -8,7 +8,7 @@ import {
   IconCamera as Camera,
   IconPhoto as ImageIcon,
   IconChevronRight as ChevronRight,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import { T, fontDisplay, fontBody, fmtBRL } from "../../lib/theme";
 import { Kpi, Eyebrow, Delta } from "../../components";
 import { useMobile } from "../../lib/context";

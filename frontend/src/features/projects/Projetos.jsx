@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { IconSearch as Search, IconPlus as Plus } from "@tabler/icons-react";
+import { IconSearch as Search, IconPlus as Plus } from "../../lib/icons";
 import { T, fontBody } from "../../lib/theme";
 import { PageHeader } from "../../components";
 import { CardProjeto } from "../home/HomeGeral";

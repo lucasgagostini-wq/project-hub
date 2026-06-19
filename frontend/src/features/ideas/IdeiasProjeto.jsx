@@ -3,7 +3,7 @@ import {
   IconBulb as Bulb,
   IconPlus as Plus,
   IconTrash as Trash,
-} from "@tabler/icons-react";
+} from "../../lib/icons";
 import { T, fontDisplay } from "../../lib/theme";
 import { Eyebrow } from "../../components";
 import { useMobile } from "../../lib/context";

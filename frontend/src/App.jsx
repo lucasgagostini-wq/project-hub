@@ -4,7 +4,7 @@ import {
   IconDeviceMobile as Smartphone,
   IconMoon as MoonIcon,
   IconSun as SunIcon,
-} from "@tabler/icons-react";
+} from "./lib/icons";
 
 import { T, fontBody, buildGlobalStyle, applyTheme, getThemeMode } from "./lib/theme";
 import { MobileCtx } from "./lib/context";

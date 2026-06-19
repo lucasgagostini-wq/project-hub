@@ -82,8 +82,10 @@ export function applyTheme(mode) {
 // Aplica o tema salvo já no load do módulo (antes do React renderizar) — sem flash.
 applyTheme(getThemeMode());
 
+// Fonte de display com personalidade (Space Grotesk) nos títulos/números — tira a "cara de
+// template" do sistema padrão. Cai para as fontes do SO se a web font não carregar.
 export const fontDisplay =
-  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif";
+  "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif";
 export const fontBody =
   "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif";
 
@@ -97,8 +99,15 @@ export const fmtBRLc = (n) =>
 
 // Estilo global — gerado a partir do T atual (chamar no render p/ refletir o tema).
 export function buildGlobalStyle() {
+  // Cores da textura viva, calibradas por tema (escuro mostra mais, claro fica bem sutil).
+  const dark = T.bg === DARK.bg;
+  const grid = dark ? "rgba(255,255,255,0.055)" : "rgba(20,22,40,0.05)";
+  const a1 = dark ? "rgba(59,130,246,0.20)"  : "rgba(0,113,227,0.13)";
+  const a2 = dark ? "rgba(139,92,246,0.16)"  : "rgba(124,58,237,0.09)";
+  const a3 = dark ? "rgba(13,148,136,0.14)"  : "rgba(13,148,136,0.07)";
+  const vig = dark ? T.surface : "#FFFFFF";
   return `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; background: ${T.bg}; }
   body {
@@ -123,10 +132,41 @@ export function buildGlobalStyle() {
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 8px; }
   ::-webkit-scrollbar-thumb:hover { background: ${T.faint}; }
+  /* Fundo "vivo": grade sutil que rola devagar + aurora que deriva lentamente.
+     A grade vive no próprio .grid-bg; a aurora num ::before atrás do conteúdo.
+     Tudo é só CSS e o prefers-reduced-motion global congela as animações. */
   .grid-bg {
+    position: relative;
+    z-index: 0;
     background-color: ${T.bg};
-    background-image: radial-gradient(120% 90% at 50% -10%, ${T.surface} 0%, ${T.bg} 60%);
-    background-attachment: fixed;
+    background-image:
+      linear-gradient(${grid} 1px, transparent 1px),
+      linear-gradient(90deg, ${grid} 1px, transparent 1px),
+      radial-gradient(125% 95% at 50% -10%, ${vig} 0%, ${T.bg} 62%);
+    background-size: 38px 38px, 38px 38px, 100% 100%;
+    animation: ph-grid 26s linear infinite;
+  }
+  .grid-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 42% at 18% 16%, ${a1}, transparent 60%),
+      radial-gradient(34% 38% at 84% 82%, ${a2}, transparent 62%),
+      radial-gradient(30% 34% at 76% 26%, ${a3}, transparent 60%);
+    background-size: 170% 170%, 160% 160%, 150% 150%;
+    animation: ph-aura 40s ease-in-out infinite;
+  }
+  @keyframes ph-grid {
+    from { background-position: 0 0, 0 0, 50% 0; }
+    to   { background-position: 38px 38px, 38px 38px, 50% 0; }
+  }
+  @keyframes ph-aura {
+    0%   { background-position: 0% 0%, 100% 100%, 60% 0%; }
+    50%  { background-position: 26% 24%, 74% 76%, 34% 30%; }
+    100% { background-position: 0% 0%, 100% 100%, 60% 0%; }
   }
 `;
 }

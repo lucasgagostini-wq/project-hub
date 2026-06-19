@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { IconCheck as Check, IconPlus as Plus } from "@tabler/icons-react";
+import { IconCheck as Check, IconPlus as Plus } from "../../lib/icons";
 import { T, fontBody } from "../../lib/theme";
 import { Avatar, Eyebrow, PageHeader } from "../../components";
 

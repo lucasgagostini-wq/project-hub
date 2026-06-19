@@ -4,7 +4,7 @@ import {
   IconTrendingDown as TrendingDown,
   IconPlayerPlay as Play,
   IconPhoto as ImageIcon,
-} from "@tabler/icons-react";
+} from "../lib/icons";
 import { T, fontDisplay, fontBody } from "../lib/theme";
 
 export function Avatar({ user, size = 30 }) {
