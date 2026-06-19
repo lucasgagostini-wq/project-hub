@@ -56,6 +56,7 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
     preco: "",
     garantia: "",
     persona_nome: "",
+    persona_canal: "",
     persona_dor: "",
     persona_desejo: "",
     persona_objecao: "",
@@ -63,6 +64,7 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
   const [linksTipo, setLinksTipo] = useState([{ tipo: "Página de vendas", url: "" }]);
   const [submitting, setSubmitting] = useState(false);
   const [erros, setErros] = useState({});
+  const [submitErr, setSubmitErr] = useState(null);
 
   // ── Clonagem de oferta ──────────────────────────────────────────────
   const [cloneUrl, setCloneUrl] = useState("");
@@ -173,12 +175,14 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
   const submit = async () => {
     if (!validar()) return;
     setSubmitting(true);
+    setSubmitErr(null);
     const payload = {
       id: "p-" + Date.now(),
       ...form,
       links: linksTipo.filter((l) => l.url.trim()),
       persona: form.persona_nome ? {
         nome: form.persona_nome,
+        canal: form.persona_canal,
         dor: form.persona_dor,
         desejo: form.persona_desejo,
         objecao: form.persona_objecao,
@@ -187,8 +191,15 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
       criativos: [], estruturas: {}, timeline: [],
       ...(cloneTynk ? { tynk: { ...cloneTynk, ...(snap ? { snapshot: snap } : {}) } } : {}),
     };
-    await onCriar?.(payload);
-    setSubmitting(false);
+    // try/finally: se a criação falhar (ex.: erro no Supabase), mostra a mensagem e
+    // libera o botão — antes, a rejeição não-tratada deixava "Criando…" travado.
+    try {
+      await onCriar?.(payload);
+    } catch (e) {
+      setSubmitErr(e?.message || "Não foi possível criar o projeto. Tente de novo.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const secSt = {
@@ -410,6 +421,12 @@ export default function NovoProjeto({ onVoltar, onCriar, inicial }) {
         </section>
 
         {/* Ações */}
+        {submitErr && (
+          <div role="alert" style={{ fontSize: 12.5, fontWeight: 500, padding: "9px 12px", borderRadius: 9,
+            color: T.neg, background: T.negBg }}>
+            {submitErr}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingBottom: 40 }}>
           <button onClick={onVoltar}
             style={{ padding: "11px 22px", borderRadius: 11, border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 14, fontWeight: 500 }}>

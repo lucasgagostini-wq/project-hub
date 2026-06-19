@@ -1,6 +1,7 @@
 import React from "react";
 import { T, fontDisplay } from "../../lib/theme";
 import { Avatar, PageHeader } from "../../components";
+import { fmtDiaMes } from "../../lib/utils";
 
 export default function Reunioes({ reunioes = [], userById }) {
   return (
@@ -17,8 +18,8 @@ export default function Reunioes({ reunioes = [], userById }) {
             display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
               <div style={{ textAlign: "center", width: 50 }}>
-                <div style={{ fontFamily: fontDisplay, fontSize: 20, fontWeight: 600 }}>{(r.data || "").slice(8, 10)}</div>
-                <div style={{ fontSize: 11.5, color: T.faint }}>mai · {r.hora}</div>
+                <div style={{ fontFamily: fontDisplay, fontSize: 20, fontWeight: 600 }}>{fmtDiaMes(r.data).dia}</div>
+                <div style={{ fontSize: 11.5, color: T.faint }}>{fmtDiaMes(r.data).mes}{r.hora ? ` · ${r.hora}` : ""}</div>
               </div>
               <div style={{ width: 1, height: 34, background: T.hair }} />
               <div style={{ fontSize: 14.5, fontWeight: 600, fontFamily: fontDisplay }}>{r.titulo}</div>

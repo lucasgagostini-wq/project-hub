@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { IconCalendar as CalendarDays, IconWorld as Globe } from "@tabler/icons-react";
 import { T } from "../../lib/theme";
 import { Avatar, ChipFiltro } from "../../components";
 import { PageHeader } from "../../components";
+import { fmtDiaMes } from "../../lib/utils";
 
 function conectarGoogleAgenda() { return { ok: true }; }
 
@@ -20,13 +21,19 @@ export default function CalendarioGeral({ tarefas = [], reunioes = [], userById,
   const [filtro, setFiltro] = useState("todos");
   const [googleOn, setGoogleOn] = useState(false);
 
-  const eventos = [
-    ...tarefas.map((t) => ({ tipo: "tarefa", data: t.data, label: t.titulo, resp: t.resp, proj: t.proj })),
-    ...reunioes.flatMap((r) => (r.participantes || []).map((p) => ({ tipo: "reuniao", data: r.data, label: r.titulo, resp: p }))),
-    ...(googleOn ? GOOGLE_EVENTOS : []),
-  ]
-    .filter((e) => filtro === "todos" || e.resp === filtro)
-    .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  // Um evento por tarefa/reunião (antes, `flatMap` sobre participantes duplicava cada
+  // reunião N vezes na visão "Todos"). `membros` guarda os responsáveis para o filtro
+  // por pessoa e para os avatares. useMemo evita recomputar a cada render sem relação.
+  const eventos = useMemo(() => {
+    const lista = [
+      ...tarefas.map((t) => ({ tipo: "tarefa", data: t.data, label: t.titulo, membros: t.resp ? [t.resp] : [], proj: t.proj })),
+      ...reunioes.map((r) => ({ tipo: "reuniao", data: r.data, label: r.titulo, membros: r.participantes || [] })),
+      ...(googleOn ? GOOGLE_EVENTOS.map((g) => ({ ...g, membros: [] })) : []),
+    ];
+    return lista
+      .filter((e) => filtro === "todos" || e.membros.includes(filtro))
+      .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  }, [tarefas, reunioes, googleOn, filtro]);
 
   return (
     <div>
@@ -54,7 +61,7 @@ export default function CalendarioGeral({ tarefas = [], reunioes = [], userById,
             Desconectar
           </button>
         ) : (
-          <button onClick={() => { conectarGoogleAgenda(); setGoogleOn(true); }}
+          <button onClick={() => { const r = conectarGoogleAgenda(); if (r?.ok) setGoogleOn(true); }}
             style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "#fff",
               border: "none", background: T.primary, borderRadius: 10, padding: "9px 14px" }}>
             <Globe size={15} /> Conectar
@@ -78,15 +85,16 @@ export default function CalendarioGeral({ tarefas = [], reunioes = [], userById,
           </div>
         )}
         {eventos.map((e, i) => {
-          const u = e.resp ? userById?.(e.resp) : null;
           const p = e.proj ? projById?.(e.proj) : null;
+          const membros = e.membros.map((id) => userById?.(id)).filter(Boolean);
           const b = badge(e.tipo);
+          const { dia, mes } = fmtDiaMes(e.data);
           return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: T.surface,
+            <div key={`${e.tipo}-${e.data}-${e.label}-${i}`} style={{ display: "flex", alignItems: "center", gap: 14, background: T.surface,
               border: `1px solid ${T.border}`, borderRadius: 13, padding: "13px 16px" }}>
               <div style={{ textAlign: "center", width: 46 }}>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 600 }}>{(e.data || "").slice(8, 10)}</div>
-                <div style={{ fontSize: 11, color: T.faint }}>mai</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 600 }}>{dia}</div>
+                <div style={{ fontSize: 11, color: T.faint }}>{mes}</div>
               </div>
               <div style={{ width: 1, height: 30, background: T.hair }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -96,7 +104,15 @@ export default function CalendarioGeral({ tarefas = [], reunioes = [], userById,
                   {p && <span>{p.nome || p.name}</span>}
                 </div>
               </div>
-              {u ? <Avatar user={u} size={28} /> : (
+              {membros.length ? (
+                <div style={{ display: "flex" }}>
+                  {membros.map((u, j) => (
+                    <div key={u.id} style={{ marginLeft: j ? -8 : 0, border: `2px solid ${T.surface}`, borderRadius: 999 }}>
+                      <Avatar user={u} size={28} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <div style={{ width: 28, height: 28, borderRadius: 999, background: "#E8F0FE", display: "flex",
                   alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Globe size={15} color="#1A73E8" />

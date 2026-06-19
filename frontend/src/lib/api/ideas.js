@@ -22,7 +22,7 @@ export async function listIdeas() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data.map(norm);
+  return (data || []).map(norm);
 }
 
 export async function createIdea(idea) {

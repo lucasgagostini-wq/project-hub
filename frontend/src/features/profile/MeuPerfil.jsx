@@ -9,6 +9,7 @@ const CORES = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899",
 function resizeToDataURL(file, side = 256) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const url = URL.createObjectURL(file);
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = side; canvas.height = side;
@@ -16,10 +17,11 @@ function resizeToDataURL(file, side = 256) {
       const src = Math.min(img.width, img.height);
       const sx = (img.width - src) / 2, sy = (img.height - src) / 2;
       ctx.drawImage(img, sx, sy, src, src, 0, 0, side, side);
+      URL.revokeObjectURL(url); // libera o blob — sem isso, cada foto escolhida vaza memória
       resolve(canvas.toDataURL("image/jpeg", 0.85));
     };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
   });
 }
 
@@ -47,8 +49,13 @@ export default function MeuPerfil({ perfil, onSalvar, onFechar }) {
   const salvar = async () => {
     if (salvando || !nome.trim()) return;
     setSalvando(true);
-    await onSalvar?.({ nome: nome.trim(), cor, avatar, inicial: inicialDe(nome) });
-    setSalvando(false);
+    // try/finally garante que o botão sai de "Salvando…" mesmo se onSalvar rejeitar
+    // (antes, um erro deixava o botão travado para sempre).
+    try {
+      await onSalvar?.({ nome: nome.trim(), cor, avatar, inicial: inicialDe(nome) });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const preview = { nome, name: nome, cor, color: cor, avatar, inicial: inicialDe(nome) };

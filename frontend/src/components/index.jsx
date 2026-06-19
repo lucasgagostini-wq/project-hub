@@ -188,6 +188,14 @@ export function StatusBadge({ status }) {
 }
 
 export function RoasTag({ roas }) {
+  // roas pode vir null/undefined/NaN (ex.: em produção o gasto de anúncios não tem
+  // API de leitura, então lucro/ROAS ficam nulos). Sem a guarda, `roas.toFixed` quebra
+  // ou renderiza "NaNx". Mostramos "—" quando não há valor calculável.
+  if (!Number.isFinite(roas)) {
+    return (
+      <span style={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: 14, color: T.faint }}>—</span>
+    );
+  }
   const bom = roas >= 1;
   return (
     <span style={{ fontFamily: fontDisplay, fontWeight: 600, fontSize: 14, fontVariantNumeric: "tabular-nums", color: bom ? T.pos : T.neg }}>

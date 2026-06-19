@@ -322,6 +322,7 @@ export default function App() {
         >
           {projeto ? (
             <ProjetoDetalhe
+              key={projeto.id}
               projeto={projeto}
               aba={abaProjeto}
               setAba={setAbaProjeto}
@@ -489,11 +490,11 @@ export default function App() {
                 inicial={novoInicial}
                 onVoltar={() => { setNovoOpen(false); setNovoInicial(null); }}
                 onCriar={async (p) => {
-                  let projeto = p;
-                  if (!isMockMode) {
-                    try { projeto = await createProject(p); }
-                    catch (e) { console.error("[App] criar projeto:", e); }
-                  }
+                  // Se a criação no Supabase falhar, propaga o erro para o formulário
+                  // (NovoProjeto mostra a mensagem) e NÃO insere um projeto fantasma —
+                  // antes, uma falha ainda adicionava `p` na lista e navegava para um
+                  // projeto que não existe no banco (sumia no próximo carregarDados).
+                  const projeto = isMockMode ? p : await createProject(p);
                   setProjetos((ps) => [...ps, projeto]);
                   setNovoOpen(false);
                   setNovoInicial(null);

@@ -60,7 +60,7 @@ function CardProjeto({ p, onAbrir, onSetImagem }) {
             <div style={{ fontSize: 11.5, color: T.faint }}>Faturamento</div>
             <div style={{ fontFamily: fontDisplay, fontSize: 19, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmtBRL(p.faturamento)}</div>
           </div>
-          <Delta value={p.escala > 0 ? margem : -margem} suffix="%" />
+          <Delta value={margem} suffix="%" />
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11.5, color: T.muted, borderTop: `1px solid ${T.hair}`, paddingTop: 11 }}>
           <Megaphone size={13} /> {p.veiculo} <span style={{ color: T.faint }}>·</span> <Clock size={13} /> {p.tempoOnline}d no ar

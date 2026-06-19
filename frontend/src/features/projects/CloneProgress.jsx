@@ -59,41 +59,51 @@ export default function CloneProgress({ cloning, snapping, done, error, sourceUr
   const [concluidas, setConcluidas] = useState(0);
   const [subIdx, setSubIdx] = useState(0);
 
-  const timerRef = useRef(null);
+  const timersRef = useRef([]); // todos os setTimeout em voo, limpos juntos
   const subTimerRef = useRef(null);
   const cursor = useBlinkCursor(!done && !error);
+  const clearTimers = () => { timersRef.current.forEach(clearTimeout); timersRef.current = []; };
 
-  // Avança etapas internas enquanto cloning=true
+  // Avança as etapas por timer enquanto cloning=true. Guardar TODOS os timeouts num array
+  // garante o clear no cleanup e nos caminhos de erro/done — antes, o timeout aninhado de
+  // 22s podia escapar e regredir a barra depois do fluxo já ter terminado ou falhado.
   useEffect(() => {
-    if (!cloning) return;
-    // Reseta ao iniciar
+    if (!cloning || error) return;
     setEtapaAtiva(0); setConcluidas(0); setSubIdx(0);
 
-    // Etapa 0 → 1 após 1500ms
-    timerRef.current = setTimeout(() => {
+    const t0 = setTimeout(() => {
       setConcluidas(1); setEtapaAtiva(1); setSubIdx(0);
-      // Etapa 1 → 2 após 22000ms (se clone ainda não resolveu)
-      timerRef.current = setTimeout(() => {
+      const t1 = setTimeout(() => {
         setConcluidas(2); setEtapaAtiva(2); setSubIdx(0);
       }, 22000);
+      timersRef.current.push(t1);
     }, 1500);
+    timersRef.current.push(t0);
 
-    return () => clearTimeout(timerRef.current);
-  }, [cloning]);
+    return clearTimers;
+  }, [cloning, error]);
 
   // Quando clone termina e começa snapshot
   useEffect(() => {
     if (!snapping) return;
-    clearTimeout(timerRef.current);
+    clearTimers();
     setConcluidas(3); setEtapaAtiva(3); setSubIdx(0);
   }, [snapping]);
 
   // Quando done
   useEffect(() => {
     if (!done) return;
-    clearTimeout(timerRef.current);
+    clearTimers();
     setConcluidas(4); setEtapaAtiva(-1);
   }, [done]);
+
+  // Em erro: para todos os timers e a rotação de sub-mensagens (sem isso, o timeout de
+  // 22s seguiria armado e a barra "andaria" sozinha mesmo após a falha aparecer).
+  useEffect(() => {
+    if (!error) return;
+    clearTimers();
+    clearInterval(subTimerRef.current);
+  }, [error]);
 
   // Rotaciona sub-mensagem da etapa ativa
   useEffect(() => {

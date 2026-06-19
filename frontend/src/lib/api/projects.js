@@ -9,11 +9,13 @@ function norm(row) {
   const persona  = Array.isArray(row.personas)  ? row.personas[0]  : (row.personas  ?? null);
   const links    = row.offer_links    ?? [];
   const criativos = row.creatives     ?? [];
-  const snaps    = (row.metric_snapshots ?? []).sort((a, b) => a.date > b.date ? 1 : -1);
+  // Copia antes de ordenar (não muta o array devolvido pelo Supabase) e ordena de forma
+  // estável por data. slice(0,10) abaixo tolera tanto "YYYY-MM-DD" quanto timestamp completo.
+  const snaps    = [...(row.metric_snapshots ?? [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   // Build timeline with delta
   const timeline = snaps.map((s, i) => ({
-    dia: new Date(s.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+    dia: new Date(String(s.date).slice(0, 10) + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
     faturamento: s.revenue,
     delta: i === 0 ? 0 : s.revenue - snaps[i - 1].revenue,
   }));
@@ -77,7 +79,7 @@ export async function listProjects() {
     .eq("active", true)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data.map(norm);
+  return (data || []).map(norm);
 }
 
 export async function getProject(id) {
@@ -124,7 +126,7 @@ export async function createProject(payload) {
   // 2. Insert offer row
   const { error: oe } = await supabase.from("offers").insert({
     project_id:  projectId,
-    description: payload.oferta    ?? payload.oferta ?? "",
+    description: payload.oferta    ?? payload.description ?? "",
     publico:     payload.publico   ?? "",
     idade_range: payload.idade     ?? "",
     preco:       payload.preco     ?? "",
