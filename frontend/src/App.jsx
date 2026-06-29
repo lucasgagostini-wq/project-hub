@@ -435,6 +435,7 @@ export default function App() {
                 );
                 if (!isMockMode) await updateProject(projeto.id, { tynk: tynkUpdated }).catch(console.error);
               }}
+              onSynced={async () => { if (!isMockMode) await carregarDados(); }}
             />
           ) : (
             <>

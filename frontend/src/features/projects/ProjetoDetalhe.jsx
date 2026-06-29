@@ -35,6 +35,7 @@ import {
 import { useMobile } from "../../lib/context";
 import { gerarTimeline } from "../../lib/utils";
 import { MOCK_ESTRUTURAS } from "../../lib/api/mockData";
+import { sincronizarSheets } from "../../lib/api/sheets";
 import { sincronizarMetricas } from "../../lib/api/metrics";
 import IdeiasProjeto from "../ideas/IdeiasProjeto";
 
@@ -927,6 +928,27 @@ const PROVEDORES = [
     campos: [],
     notaServidor: "O token do UTMfy (UTMFY_API_TOKEN) fica só no servidor. O UTMfy não expõe API pública de leitura de gasto — por isso o gasto é informado manualmente na aba Desempenho.",
   },
+  {
+    key: "sheets",
+    nome: "Google Sheets (Adveronix)",
+    tipo: "Dados de anúncios",
+    desc: "Lê uma planilha do Adveronix (FB Ads) e atualiza gasto, ROAS e o dashboard de Marketing.",
+    icon: ChartBar,
+    cor: "#188038",
+    site: "https://www.adveronix.com",
+    obrigatorios: [],
+    campos: [
+      { k: "sheetId", label: "URL (ou ID) da planilha", placeholder: "https://docs.google.com/spreadsheets/d/...",
+        hint: "Compartilhe a planilha (como Leitor) com o e-mail da conta de serviço antes de sincronizar." },
+      { k: "tab", label: "Aba", placeholder: "ex.: Sheet1 / Página1" },
+      { k: "colDate", label: "Coluna de data", placeholder: "ex.: Date" },
+      { k: "colSpend", label: "Coluna de gasto", placeholder: "ex.: Spend" },
+      { k: "colImpr", label: "Coluna de impressões (opcional)", placeholder: "ex.: Impressions" },
+      { k: "colClicks", label: "Coluna de cliques (opcional)", placeholder: "ex.: Clicks" },
+      { k: "colConv", label: "Coluna de conversões (opcional)", placeholder: "ex.: Conversions" },
+    ],
+    notaServidor: "A chave da conta de serviço (GOOGLE_SERVICE_ACCOUNT_JSON) fica só no servidor. A planilha continua privada — só o e-mail do robô tem leitura.",
+  },
 ];
 
 // Campo de configuração NÃO-sensível (ex.: lista de produtos). Segredos não passam por aqui.
@@ -948,9 +970,11 @@ function CampoConfig({ campo, valor, onChange }) {
   );
 }
 
-function IntegracaoCard({ prov, valores, onConectar, onDesconectar }) {
+function IntegracaoCard({ prov, valores, onConectar, onDesconectar, projectId, onSynced }) {
   const [draft, setDraft] = useState(valores || {});
   const [copiado, setCopiado] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState(null);
   const Icon = prov.icon;
   const conectado = !!valores?.conectado;
   const webhookUrl = prov.webhookPath
@@ -1011,6 +1035,34 @@ function IntegracaoCard({ prov, valores, onConectar, onDesconectar }) {
         </div>
       )}
 
+      {prov.key === "sheets" && valores?.conectado && (
+        <div style={{ marginTop: 14 }}>
+          <button onClick={async () => {
+            if (syncing) return;
+            setSyncing(true); setSyncMsg(null);
+            try {
+              const r = await sincronizarSheets({ projectId });
+              setSyncMsg({ ok: true, txt: `Sincronizado: ${r.rowsImported ?? 0} dia(s) importado(s).` });
+              onSynced?.();
+            } catch (e) {
+              setSyncMsg({ ok: false, txt: e.message || "Falha ao sincronizar." });
+            } finally { setSyncing(false); }
+          }} disabled={syncing}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 10,
+              border: `1px solid ${T.border}`, background: T.surface, color: T.ink, fontSize: 12.5, fontWeight: 600,
+              cursor: syncing ? "wait" : "pointer" }}>
+            <Refresh size={14} /> {syncing ? "Sincronizando…" : "Sincronizar agora"}
+          </button>
+          {valores?.lastSyncAt && (
+            <div style={{ fontSize: 11.5, color: T.faint, marginTop: 6 }}>
+              Última sincronização: {new Date(valores.lastSyncAt).toLocaleString("pt-BR")}
+              {valores.lastStatus === "erro" ? ` · erro: ${valores.lastError}` : " · ok"}
+            </div>
+          )}
+          {syncMsg && <div style={{ fontSize: 12, marginTop: 6, color: syncMsg.ok ? T.pos : T.neg }}>{syncMsg.txt}</div>}
+        </div>
+      )}
+
       {webhookUrl && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginBottom: 6 }}>
@@ -1057,15 +1109,33 @@ function IntegracaoCard({ prov, valores, onConectar, onDesconectar }) {
   );
 }
 
-function ConexoesTab({ projeto, onSalvar }) {
+function ConexoesTab({ projeto, onSalvar, onSynced }) {
   const conexoes = projeto.conexoes || {};
 
   const salvarProvedor = (prov, dados) => {
-    const novo = { ...conexoes, [prov.key]: { ...dados, conectado: true, em: new Date().toISOString() } };
+    let extra = {};
+    if (prov.key === "sheets") {
+      // Monta a config que o backend espera (map de colunas + enabled) a partir dos campos.
+      extra = {
+        enabled: true,
+        sheetId: dados.sheetId || "",
+        tab: dados.tab || "Sheet1",
+        headerRow: 1,
+        currency: "BRL",
+        map: {
+          date: dados.colDate || "Date",
+          spend: dados.colSpend || "Spend",
+          impressions: dados.colImpr || "Impressions",
+          clicks: dados.colClicks || "Clicks",
+          conversions: dados.colConv || "Conversions",
+        },
+      };
+    }
+    const novo = { ...conexoes, [prov.key]: { ...dados, ...extra, conectado: true, em: new Date().toISOString() } };
     onSalvar?.(novo, `conectou o ${prov.nome}`);
   };
   const desconectarProvedor = (prov) => {
-    const novo = { ...conexoes, [prov.key]: { ...(conexoes[prov.key] || {}), conectado: false } };
+    const novo = { ...conexoes, [prov.key]: { ...(conexoes[prov.key] || {}), conectado: false, enabled: false } };
     onSalvar?.(novo, `desconectou o ${prov.nome}`);
   };
 
@@ -1086,10 +1156,72 @@ function ConexoesTab({ projeto, onSalvar }) {
           key={prov.key}
           prov={prov}
           valores={conexoes[prov.key]}
+          projectId={projeto.id}
+          onSynced={onSynced}
           onConectar={(dados) => salvarProvedor(prov, dados)}
           onDesconectar={() => desconectarProvedor(prov)}
         />
       ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aba Marketing — KPIs e gráfico de gasto×receita (dados do Adveronix via Sheets)
+// ─────────────────────────────────────────────────────────────────────────────
+function MarketingTab({ projeto }) {
+  const tot = projeto.adTotais || { gasto: 0, impressoes: 0, cliques: 0, conversoes: 0 };
+  const fat = projeto.faturamento || 0;
+  const roas = tot.gasto > 0 ? fat / tot.gasto : null;
+  const resultado = fat - tot.gasto;
+  const ctr = tot.impressoes > 0 ? (tot.cliques / tot.impressoes) * 100 : null;
+  const cpc = tot.cliques > 0 ? tot.gasto / tot.cliques : null;
+  const temDados = (projeto.adTimeline || []).length > 0;
+
+  // junta gasto (adTimeline) e receita (timeline) por dia para o gráfico
+  const porDia = {};
+  (projeto.timeline || []).forEach((d) => { porDia[d.dia] = { dia: d.dia, receita: d.faturamento || 0, gasto: 0 }; });
+  (projeto.adTimeline || []).forEach((d) => { porDia[d.dia] = { ...(porDia[d.dia] || { dia: d.dia, receita: 0 }), gasto: d.gasto }; });
+  const serie = Object.values(porDia);
+
+  if (!temDados) {
+    return (
+      <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
+        <Eyebrow>Marketing</Eyebrow>
+        <div style={{ textAlign: "center", padding: "26px 0", color: T.faint, fontSize: 13 }}>
+          Conecte uma planilha do Adveronix na aba <b>Conexões</b> e clique em “Sincronizar agora”.
+        </div>
+      </section>
+    );
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
+        <Eyebrow>Resumo de marketing</Eyebrow>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
+          <MiniStat label="Gasto" value={fmtBRL(tot.gasto)} />
+          <MiniStat label="ROAS" value={roas == null ? "—" : roas.toFixed(2) + "x"} />
+          <MiniStat label="Resultado" value={fmtBRL(resultado)} sub="faturamento − gasto" />
+          <MiniStat label="CTR" value={ctr == null ? "—" : ctr.toFixed(1) + "%"} />
+          <MiniStat label="CPC" value={cpc == null ? "—" : fmtBRLc(cpc)} />
+          <MiniStat label="Conversões" value={tot.conversoes} />
+        </div>
+      </section>
+      <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
+        <Eyebrow>Gasto × receita por dia</Eyebrow>
+        <div style={{ height: 240 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={serie} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={T.hair} />
+              <XAxis dataKey="dia" tick={{ fontSize: 11, fill: T.faint }} />
+              <YAxis tick={{ fontSize: 11, fill: T.faint }} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: `1px solid ${T.border}`, fontSize: 12, fontFamily: fontBody, background: T.surface, color: T.ink }} />
+              <Area type="monotone" dataKey="receita" stroke={T.pos} fill={T.posBg} strokeWidth={2} />
+              <Area type="monotone" dataKey="gasto" stroke={T.neg} fill={T.negBg} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
     </div>
   );
 }
@@ -1100,7 +1232,7 @@ function ConexoesTab({ projeto, onSalvar }) {
 export default function ProjetoDetalhe({
   projeto, aba, setAba, onVoltar, userById, atividade = [],
   onEditarPersona, onEditarOferta, onRegistrar, naoAtribuidos = [], onAtribuir, onEditarEstrutura,
-  onEditarConexoes, onSyncMetricas, onEditarGasto, onEditarIdeias, onGerarSnapshot,
+  onEditarConexoes, onSyncMetricas, onEditarGasto, onEditarIdeias, onGerarSnapshot, onSynced,
 }) {
   return (
     <div>
@@ -1125,6 +1257,7 @@ export default function ProjetoDetalhe({
           { id: "estruturas", l: "Estruturas" },
           { id: "ideias", l: "Ideias" },
           { id: "anuncios", l: "Desempenho" },
+          { id: "marketing", l: "Marketing" },
           { id: "conexoes", l: "Conexões" },
         ].map((t) => (
           <button key={t.id} onClick={() => setAba(t.id)}
@@ -1142,7 +1275,8 @@ export default function ProjetoDetalhe({
       {aba === "estruturas"&& <EstruturasTab projeto={projeto} onEditarEstrutura={onEditarEstrutura} />}
       {aba === "ideias"    && <IdeiasProjeto projeto={projeto} onSalvar={onEditarIdeias} />}
       {aba === "anuncios"  && <AnunciosTab projeto={projeto} onRegistrar={onRegistrar} naoAtribuidos={naoAtribuidos} onAtribuir={onAtribuir} onSyncMetricas={onSyncMetricas} onEditarGasto={onEditarGasto} />}
-      {aba === "conexoes"  && <ConexoesTab projeto={projeto} onSalvar={onEditarConexoes} />}
+      {aba === "marketing" && <MarketingTab projeto={projeto} />}
+      {aba === "conexoes"  && <ConexoesTab projeto={projeto} onSalvar={onEditarConexoes} onSynced={onSynced} />}
     </div>
   );
 }

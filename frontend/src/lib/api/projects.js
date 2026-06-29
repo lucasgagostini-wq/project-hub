@@ -20,6 +20,21 @@ function norm(row) {
     delta: i === 0 ? 0 : s.revenue - snaps[i - 1].revenue,
   }));
 
+  // Série de ads (gasto/impressões/cliques/conversões) por dia — para a aba Marketing.
+  const adSnaps = snaps.filter((s) => Number(s.ad_spend) > 0 || Number(s.impressions) > 0);
+  const adTimeline = adSnaps.map((s) => ({
+    dia: new Date(String(s.date).slice(0, 10) + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+    date: String(s.date).slice(0, 10),
+    gasto: Number(s.ad_spend) || 0,
+    impressoes: Number(s.impressions) || 0,
+    cliques: Number(s.clicks) || 0,
+    conversoes: Number(s.conversions) || 0,
+  }));
+  const adTotais = adTimeline.reduce((t, d) => ({
+    gasto: t.gasto + d.gasto, impressoes: t.impressoes + d.impressoes,
+    cliques: t.cliques + d.cliques, conversoes: t.conversoes + d.conversoes,
+  }), { gasto: 0, impressoes: 0, cliques: 0, conversoes: 0 });
+
   return {
     id:           row.id,
     nome:         row.name,
@@ -53,6 +68,8 @@ function norm(row) {
     links:      links.map((l) => ({ tipo: l.tipo, url: l.url })),
     criativos:  criativos.map((c) => ({ nome: c.nome, vendas: c.vendas, gasto: c.gasto, roas: c.roas })),
     timeline,
+    adTimeline,
+    adTotais,
     created_at: row.created_at,
   };
 }
@@ -66,7 +83,7 @@ const PROJECT_SELECT = `
   personas(*),
   offer_links(*),
   creatives(*),
-  metric_snapshots(id, date, revenue, net_profit, ad_spend, source)
+  metric_snapshots(id, date, revenue, net_profit, ad_spend, impressions, clicks, conversions, source)
 `.trim();
 
 // ── Queries ──────────────────────────────────────────────────
