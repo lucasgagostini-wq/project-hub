@@ -83,7 +83,7 @@ const PROJECT_SELECT = `
   personas(*),
   offer_links(*),
   creatives(*),
-  metric_snapshots(id, date, revenue, net_profit, ad_spend, impressions, clicks, conversions, source)
+  metric_snapshots(id, date, revenue, net_profit, ad_spend, source)
 `.trim();
 
 // ── Queries ──────────────────────────────────────────────────
