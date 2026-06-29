@@ -3,3 +3,9 @@ dist
 .env
 *.log
 .vercel
+
+# Agent skills instaladas localmente (tooling do dev, não é código do app)
+.agents/
+.superpowers/
+.claude/skills/
+skills-lock.json
