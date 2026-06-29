@@ -4,5 +4,8 @@
   "installCommand": "echo 'deps handled in buildCommand'",
   "functions": {
     "api/**/*.js": { "maxDuration": 60 }
-  }
+  },
+  "crons": [
+    { "path": "/api/v1/sheets-sync", "schedule": "0 8 * * *" }
+  ]
 }
