@@ -38,6 +38,7 @@ import { MOCK_ESTRUTURAS } from "../../lib/api/mockData";
 import { sincronizarSheets } from "../../lib/api/sheets";
 import { sincronizarMetricas } from "../../lib/api/metrics";
 import IdeiasProjeto from "../ideas/IdeiasProjeto";
+import VendasTab from "./VendasTab";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Prévia da oferta (modal)
@@ -1252,6 +1253,7 @@ export default function ProjetoDetalhe({
       <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${T.border}`, marginBottom: 26, overflowX: "auto" }}>
         {[
           { id: "resumo", l: "Resumo" },
+          { id: "vendas", l: "Vendas · UTM" },
           { id: "overview", l: "Visão geral" },
           { id: "oferta", l: "Gestão de oferta" },
           { id: "estruturas", l: "Estruturas" },
@@ -1270,6 +1272,7 @@ export default function ProjetoDetalhe({
       </div>
 
       {aba === "resumo"    && <ResumoTab projeto={projeto} onGerarSnapshot={onGerarSnapshot} />}
+      {aba === "vendas"    && <VendasTab projeto={projeto} />}
       {aba === "overview"  && <ProjetoOverview projeto={projeto} />}
       {aba === "oferta"    && <GestaoOferta projeto={projeto} userById={userById} atividade={atividade} onEditarPersona={onEditarPersona} onEditarOferta={onEditarOferta} />}
       {aba === "estruturas"&& <EstruturasTab projeto={projeto} onEditarEstrutura={onEditarEstrutura} />}
