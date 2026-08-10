@@ -4,7 +4,7 @@ dist
 *.log
 .vercel
 
-# Agent skills instaladas localmente (tooling do dev, não é código do app)
+# Agent skills instaladas localmente (tooling do dev, n?o ? c?digo do app)
 .agents/
 .superpowers/
 .claude/skills/
