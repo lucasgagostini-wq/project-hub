@@ -71,11 +71,11 @@ begin;
 alter table sales disable trigger trg_sales_recompute;
 
 update sales s
-   set project_id = p.id
-  from projects p
- where p.slug is not null
-   and lower(trim(s.src)) = p.slug
-   and s.project_id is distinct from p.id;
+   set project_id = d.pid
+  from (select id, projeto_do_src(src) as pid from sales where src is not null) d
+ where d.id = s.id
+   and d.pid is not null
+   and s.project_id is distinct from d.pid;
 
 alter table sales enable trigger trg_sales_recompute;
 

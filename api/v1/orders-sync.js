@@ -35,6 +35,8 @@ const ts = (v) => {
   return isNaN(d.getTime()) ? null : d.toISOString();
 };
 
+const { projetoDoSrc } = require("../_src-match");
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -90,17 +92,13 @@ module.exports = async (req, res) => {
     if (!pdata.length) return res.status(404).json({ error: "project_not_found" });
 
     // Roteamento por oferta: o funil manda um `project_id` só (a env HUB_SYNC_PROJECT_ID),
-    // mas marca a oferta em `src`. Quem tem `slug` cadastrado recebe a própria venda; o
-    // resto cai no projeto que veio no corpo. Assim cada oferta vira uma linha do placar
-    // sem precisar mexer no funil que vende.
-    const slugMap = new Map();
-    const sr = await sb("projects?slug=not.is.null&select=id,slug");
-    if (sr.ok) {
-      for (const p of await sr.json()) {
-        if (p.slug) slugMap.set(String(p.slug).trim().toLowerCase(), p.id);
-      }
-    }
-    const destinoDe = (src) => slugMap.get(String(src || "").trim().toLowerCase()) || projectId;
+    // e em `src` grava a CENA do vídeo, não a oferta. Cada oferta declara os prefixos
+    // que reivindica em `src_match`; o mais específico vence (ver api/_src-match.js).
+    // O que ninguém reivindica cai no projeto que veio no corpo.
+    let ofertas = [];
+    const sr = await sb("projects?src_match=not.is.null&select=id,src_match");
+    if (sr.ok) ofertas = await sr.json();
+    const destinoDe = (src) => projetoDoSrc(src, ofertas) || projectId;
 
     const rows = [];
     const skipped = [];
