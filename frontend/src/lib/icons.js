@@ -28,6 +28,7 @@ export {
   Copy as IconCopy,
   MagicWand as IconWand,
   Eye as IconEye,
+  Lock as IconLock,
   DownloadSimple as IconDownload,
   MagnifyingGlass as IconSearch,
   TrendUp as IconTrendingUp,
