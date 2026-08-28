@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { IconSearch as Search, IconPlus as Plus } from "../../lib/icons";
 import { T, fontBody } from "../../lib/theme";
 import { PageHeader } from "../../components";
-import { CardProjeto } from "../home/HomeGeral";
+import { CardProjeto } from "./CardProjeto";
 
 export default function Projetos({ projetos = [], onAbrir, onNovo, onSetImagem }) {
   const [busca, setBusca] = useState("");

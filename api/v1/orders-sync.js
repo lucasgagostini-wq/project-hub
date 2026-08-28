@@ -89,6 +89,19 @@ module.exports = async (req, res) => {
     const pdata = pr.ok ? await pr.json() : [];
     if (!pdata.length) return res.status(404).json({ error: "project_not_found" });
 
+    // Roteamento por oferta: o funil manda um `project_id` só (a env HUB_SYNC_PROJECT_ID),
+    // mas marca a oferta em `src`. Quem tem `slug` cadastrado recebe a própria venda; o
+    // resto cai no projeto que veio no corpo. Assim cada oferta vira uma linha do placar
+    // sem precisar mexer no funil que vende.
+    const slugMap = new Map();
+    const sr = await sb("projects?slug=not.is.null&select=id,slug");
+    if (sr.ok) {
+      for (const p of await sr.json()) {
+        if (p.slug) slugMap.set(String(p.slug).trim().toLowerCase(), p.id);
+      }
+    }
+    const destinoDe = (src) => slugMap.get(String(src || "").trim().toLowerCase()) || projectId;
+
     const rows = [];
     const skipped = [];
     for (const o of orders) {
@@ -99,7 +112,7 @@ module.exports = async (req, res) => {
         continue;
       }
       rows.push({
-        project_id: projectId,
+        project_id: destinoDe(o.src),
         gateway,
         transaction_id: txId,
         event: s(o.event, 60),

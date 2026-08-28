@@ -1,0 +1,10 @@
+{
+  "name": "project-hub",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cockpit de gestão das ofertas — placar, diário e gasto de anúncio por oferta.",
+  "scripts": {
+    "test": "node --test",
+    "build": "cd frontend && npm install && npm run build"
+  }
+}

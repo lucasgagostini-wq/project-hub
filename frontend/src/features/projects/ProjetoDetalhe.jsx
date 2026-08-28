@@ -33,6 +33,8 @@ import {
   CreativeThumb, StatusBadge, RoasTag, Avatar,
 } from "../../components";
 import { useMobile } from "../../lib/context";
+import DiarioOferta from "./DiarioOferta";
+import IdentidadeOferta from "./IdentidadeOferta";
 import { gerarTimeline } from "../../lib/utils";
 import { MOCK_ESTRUTURAS } from "../../lib/api/mockData";
 import { sincronizarSheets } from "../../lib/api/sheets";
@@ -355,50 +357,9 @@ function ProjetoOverview({ projeto }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Calendário da oferta
-// ─────────────────────────────────────────────────────────────────────────────
-function CalendarioOferta({ projeto, userById }) {
-  const acoes = [
-    { dia: 4, label: "Subiu novo criativo", resp: "u4" },
-    { dia: 9, label: "Trocou headline da VSL", resp: "u3" },
-    { dia: 16, label: "Aumentou verba 30%", resp: "u2" },
-    { dia: 23, label: "Novo upsell no checkout", resp: "u1" },
-  ];
-  const dias = Array.from({ length: 30 }, (_, i) => i + 1);
-  return (
-    <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
-      <Eyebrow>Calendário da oferta — maio</Eyebrow>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 6, marginBottom: 16 }}>
-        {dias.map((d) => {
-          const ac = acoes.find((a) => a.dia === d);
-          return (
-            <div key={d} title={ac?.label}
-              style={{ aspectRatio: "1", borderRadius: 8, border: `1px solid ${ac ? T.ink : T.hair}`,
-                background: ac ? T.primary : T.surface, color: ac ? "#fff" : T.faint, display: "flex",
-                alignItems: "center", justifyContent: "center", fontSize: 11.5, fontFamily: fontDisplay,
-                fontVariantNumeric: "tabular-nums" }}>
-              {d}
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        {acoes.map((a, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5 }}>
-            <span style={{ fontFamily: fontDisplay, color: T.faint, width: 22 }}>{String(a.dia).padStart(2, "0")}/05</span>
-            <Avatar user={userById?.(a.resp)} size={20} />
-            <span>{a.label}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Aba Gestão de Oferta
 // ─────────────────────────────────────────────────────────────────────────────
-function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEditarOferta }) {
+function GestaoOferta({ projeto, userById, atividade = [], autorId, onEditarPersona, onEditarOferta, onSalvarIdentidade }) {
   const m = useMobile();
   const timeline = useMemo(
     () => projeto.timeline || gerarTimeline((projeto.fatSemana || 0) / 7, projeto.escala || 0),
@@ -410,6 +371,9 @@ function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEd
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      {/* O que liga esta oferta ao mundo real: venda (slug) e gasto (conta + prefixo) */}
+      <IdentidadeOferta projeto={projeto} onSalvar={onSalvarIdentidade} />
+
       {/* Estruturação */}
       <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
         <Eyebrow>Estruturação da oferta</Eyebrow>
@@ -507,7 +471,7 @@ function GestaoOferta({ projeto, userById, atividade = [], onEditarPersona, onEd
       </section>
 
       <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "1.2fr 1fr", gap: 22 }}>
-        <CalendarioOferta projeto={projeto} userById={userById} />
+        <DiarioOferta projeto={projeto} autorId={autorId} />
         <section style={{ ...glassStyle(), borderRadius: 16, padding: 22 }}>
           <Eyebrow>Rastreamento de mudanças</Eyebrow>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1232,7 +1196,7 @@ function MarketingTab({ projeto }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ProjetoDetalhe({
   projeto, aba, setAba, onVoltar, userById, atividade = [],
-  onEditarPersona, onEditarOferta, onRegistrar, naoAtribuidos = [], onAtribuir, onEditarEstrutura,
+  onEditarPersona, onEditarOferta, onSalvarIdentidade, autorId, onRegistrar, naoAtribuidos = [], onAtribuir, onEditarEstrutura,
   onEditarConexoes, onSyncMetricas, onEditarGasto, onEditarIdeias, onGerarSnapshot, onSynced,
 }) {
   return (
@@ -1274,7 +1238,7 @@ export default function ProjetoDetalhe({
       {aba === "resumo"    && <ResumoTab projeto={projeto} onGerarSnapshot={onGerarSnapshot} />}
       {aba === "vendas"    && <VendasTab projeto={projeto} />}
       {aba === "overview"  && <ProjetoOverview projeto={projeto} />}
-      {aba === "oferta"    && <GestaoOferta projeto={projeto} userById={userById} atividade={atividade} onEditarPersona={onEditarPersona} onEditarOferta={onEditarOferta} />}
+      {aba === "oferta"    && <GestaoOferta projeto={projeto} userById={userById} atividade={atividade} autorId={autorId} onEditarPersona={onEditarPersona} onEditarOferta={onEditarOferta} onSalvarIdentidade={onSalvarIdentidade} />}
       {aba === "estruturas"&& <EstruturasTab projeto={projeto} onEditarEstrutura={onEditarEstrutura} />}
       {aba === "ideias"    && <IdeiasProjeto projeto={projeto} onSalvar={onEditarIdeias} />}
       {aba === "anuncios"  && <AnunciosTab projeto={projeto} onRegistrar={onRegistrar} naoAtribuidos={naoAtribuidos} onAtribuir={onAtribuir} onSyncMetricas={onSyncMetricas} onEditarGasto={onEditarGasto} />}

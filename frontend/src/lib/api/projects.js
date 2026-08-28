@@ -47,6 +47,16 @@ function norm(row) {
     gastoAds:     row.gasto_ads    ?? 0,
     tempoOnline:  row.tempo_online ?? 0,
     estruturas:   row.estruturas   ?? {},
+    // Identidade da oferta no mundo real: o slug casa com o `src` que o funil grava
+    // em cada venda, e o prefixo casa com o nome da campanha no Meta. É o que
+    // permite ao placar somar venda e gasto da MESMA oferta.
+    slug:               row.slug                 ?? "",
+    funilUrl:           row.funil_url            ?? "",
+    metaAccountId:      row.meta_account_id      ?? "",
+    metaCampaignPrefix: row.meta_campaign_prefix ?? "",
+    taxaPct:            row.taxa_gateway_pct     ?? 0,
+    taxaFixa:           row.taxa_gateway_fixa    ?? 0,
+    custoEntrega:       row.custo_entrega        ?? 0,
     conexoes:     row.conexoes     ?? {},
     tynk:         row.tynk         ?? null,
     ideias:       row.ideias       ?? [],
@@ -197,6 +207,12 @@ export async function updateProject(id, patch) {
                   : k === "nicho" ? "niche"
                   : k === "veiculo" ? "vehicle"
                   : k === "ativo" ? "active"
+                  : k === "funilUrl" ? "funil_url"
+                  : k === "metaAccountId" ? "meta_account_id"
+                  : k === "metaCampaignPrefix" ? "meta_campaign_prefix"
+                  : k === "taxaPct" ? "taxa_gateway_pct"
+                  : k === "taxaFixa" ? "taxa_gateway_fixa"
+                  : k === "custoEntrega" ? "custo_entrega"
                   : k;
       projectPatch[dbKey] = v;
     }

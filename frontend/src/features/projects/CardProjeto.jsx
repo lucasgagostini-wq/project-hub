@@ -1,18 +1,15 @@
+// Card visual de uma oferta na lista de Ofertas.
+// Veio do antigo HomeGeral (a Home virou o Placar em 28/08/2026); só a lista de
+// ofertas usa este card, então ele passou a morar junto dela.
 import React, { useRef } from "react";
 import {
-  IconCurrencyDollar as DollarSign,
   IconLayoutKanban as FolderKanban,
-  IconTrophy as Trophy,
-  IconSpeakerphone as Megaphone,
-  IconClock as Clock,
   IconCamera as Camera,
   IconPhoto as ImageIcon,
   IconChevronRight as ChevronRight,
 } from "../../lib/icons";
 import { T, fontDisplay, fontBody, fmtBRL, glassStyle } from "../../lib/theme";
-import { Kpi, Eyebrow, Delta } from "../../components";
-import { useMobile } from "../../lib/context";
-import { PageHeader } from "../../components";
+import { Delta } from "../../components";
 import { resizeImageToDataURL } from "../../lib/image";
 
 function CardProjeto({ p, onAbrir, onSetImagem }) {
@@ -74,48 +71,5 @@ function CardProjeto({ p, onAbrir, onSetImagem }) {
   );
 }
 
-export default function HomeGeral({ projetos, onAbrir, onSetImagem }) {
-  const m = useMobile();
-  const ativos = projetos.filter((p) => p.ativo !== false);
-  const fatTotal = ativos.reduce((s, p) => s + (p.faturamento || 0), 0);
-  const destaque = [...ativos].sort((a, b) => (b.fatSemana || 0) - (a.fatSemana || 0))[0];
-
-  return (
-    <div>
-      <PageHeader titulo="Início" sub="Visão geral de todos os projetos ativos." />
-
-      <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "repeat(3,1fr)", gap: 14, marginBottom: 28 }}>
-        <Kpi label="Faturamento total" value={fmtBRL(fatTotal)} icon={DollarSign} accent={T.ink} delta={12} hint="vs. mês anterior" />
-        <Kpi label="Projetos ativos" value={ativos.length} icon={FolderKanban} hint="em operação agora" />
-        {destaque && (
-          <div onClick={() => onAbrir(destaque.id)} style={{ cursor: "pointer" }}>
-            <div style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)", color: "#fff", borderRadius: 16, padding: "18px 20px", height: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12.5, color: "#C9C7C0", fontWeight: 500 }}>Projeto destaque da semana</span>
-                <Trophy size={16} color="#E7C04A" />
-              </div>
-              <div style={{ fontFamily: fontDisplay, fontSize: 21, fontWeight: 600, lineHeight: 1.1 }}>{destaque.nome}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: fontDisplay, fontSize: 14, color: "#E7C04A", fontWeight: 600 }}>{fmtBRL(destaque.fatSemana || 0)}</span>
-                <span style={{ fontSize: 12, color: "#9C9A94" }}>esta semana</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <Eyebrow>Projetos</Eyebrow>
-      {ativos.length === 0 ? (
-        <div style={{ padding: "40px 0", textAlign: "center", color: T.faint, fontSize: 14 }}>
-          Nenhum projeto ativo ainda.
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
-          {ativos.map((p) => <CardProjeto key={p.id} p={p} onAbrir={onAbrir} onSetImagem={onSetImagem} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
+export default CardProjeto;
 export { CardProjeto };

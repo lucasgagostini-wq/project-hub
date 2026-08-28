@@ -2,9 +2,7 @@ import React, { useState, useCallback } from "react";
 import {
   IconHome as Home,
   IconLayoutKanban as FolderKanban,
-  IconCalendar as CalendarDays,
   IconListCheck as ListTodo,
-  IconUsers as Users2,
   IconLogout as LogOut,
   IconTarget as Target,
   IconBulb as Bulb,
@@ -15,12 +13,10 @@ import { Avatar } from "../../components";
 import { useDismissable } from "../../lib/hooks/useDismissable";
 
 const NAV_ITENS = [
-  { id: "home",      label: "Início",          icon: Home },
-  { id: "projetos",  label: "Projetos",         icon: FolderKanban },
-  { id: "ideias",    label: "Ideias",           icon: Bulb },
-  { id: "calendario",label: "Calendário geral", icon: CalendarDays },
-  { id: "tarefas",   label: "Tarefas gerais",   icon: ListTodo },
-  { id: "reunioes",  label: "Reuniões",          icon: Users2 },
+  { id: "home",      label: "Placar",         icon: Home },
+  { id: "projetos",  label: "Ofertas",        icon: FolderKanban },
+  { id: "ideias",    label: "Ideias",         icon: Bulb },
+  { id: "tarefas",   label: "Tarefas gerais", icon: ListTodo },
 ];
 
 export default function Sidebar({ secao, onNav, usuario, usuarios = [], onTrocar, onEditarPerfil, onSair }) {

@@ -12,12 +12,11 @@ import { useEscape } from "./lib/hooks/useDismissable";
 import { supabase, isMockMode } from "./lib/supabase";
 import {
   MOCK_USERS, MOCK_PROJETOS, MOCK_ATIVIDADE, MOCK_TAREFAS,
-  MOCK_REUNIOES, MOCK_NAO_ATRIBUIDOS,
+  MOCK_NAO_ATRIBUIDOS,
 } from "./lib/api/mockData";
 import { signOut, listUsers, getActor, setActor, updateProfile } from "./lib/api/auth";
 import { listProjects, createProject, updateProject, upsertOffer, upsertPersona, upsertConexoes } from "./lib/api/projects";
 import { listTasks, createTask, updateTask } from "./lib/api/tasks";
-import { listMeetings } from "./lib/api/meetings";
 import { logActivity, listActivity } from "./lib/api/activity";
 import { listIdeas, createIdea, updateIdea, deleteIdea } from "./lib/api/ideas";
 import { gerarSnapshot } from "./lib/api/clone";
@@ -26,10 +25,8 @@ import Login             from "./features/auth/Login";
 import Sidebar           from "./features/layout/Sidebar";
 import MobileTopBar      from "./features/layout/MobileTopBar";
 import MobileBottomNav   from "./features/layout/MobileBottomNav";
-import HomeGeral         from "./features/home/HomeGeral";
-import CalendarioGeral   from "./features/calendar/CalendarioGeral";
+import Placar            from "./features/placar/Placar";
 import TarefasGerais     from "./features/tasks/TarefasGerais";
-import Reunioes          from "./features/meetings/Reunioes";
 import Projetos          from "./features/projects/Projetos";
 // Code-splitting: ProjetoDetalhe (usa recharts/d3, pesado) e NovoProjeto só carregam
 // quando abertos — tira a biblioteca de gráficos do bundle inicial.
@@ -96,7 +93,6 @@ export default function App() {
   const [atividade, setAtividade]         = useState(isMockMode ? loadLocal("ph_atividade", MOCK_ATIVIDADE) : []);
   const [ideias, setIdeias]               = useState(isMockMode ? loadLocal("ph_ideias", []) : []);
   const [tarefas, setTarefas]             = useState(isMockMode ? MOCK_TAREFAS : []);
-  const [reunioes, setReunioes]           = useState(isMockMode ? MOCK_REUNIOES : []);
   const [naoAtribuidos, setNaoAtribuidos] = useState(MOCK_NAO_ATRIBUIDOS);
   const [loadErro, setLoadErro]           = useState(false); // alguma fonte falhou ao carregar
 
@@ -141,12 +137,12 @@ export default function App() {
 
   // Carrega os dados COMPARTILHADOS (Supabase). Atividade vem do audit_log.
   async function carregarDados() {
-    // allSettled (não Promise.all): se uma fonte falhar (ex.: reuniões), as demais ainda
-    // carregam — antes, uma única falha derrubava o dashboard inteiro para uma tela em branco.
+    // allSettled (não Promise.all): se uma fonte falhar, as demais ainda carregam —
+    // antes, uma única falha derrubava o dashboard inteiro para uma tela em branco.
     const results = await Promise.allSettled([
-      listProjects(), listTasks(), listMeetings(), listIdeas(), listActivity(),
+      listProjects(), listTasks(), listIdeas(), listActivity(),
     ]);
-    const setters = [setProjetos, setTarefas, setReunioes, setIdeias, setAtividade];
+    const setters = [setProjetos, setTarefas, setIdeias, setAtividade];
     results.forEach((r, i) => {
       if (r.status === "fulfilled") setters[i](r.value);
       else console.error("[carregarDados] fonte", i, r.reason);
@@ -374,6 +370,14 @@ export default function App() {
                 if (!isMockMode) await upsertPersona(projeto.id, novaPersona).catch(console.error);
                 registrar(projeto.id, "editou a persona");
               }}
+              autorId={usuarioAtual?.id}
+              onSalvarIdentidade={async (campos) => {
+                // Campos que vivem em `projects` (slug, conta/prefixo do Meta, custos) —
+                // o onEditarOferta ao lado grava na tabela `offers`, que é outra coisa.
+                setProjetos((ps) => ps.map((p) => (p.id === projeto.id ? { ...p, ...campos } : p)));
+                if (!isMockMode) await updateProject(projeto.id, campos);
+                registrar(projeto.id, "atualizou a identidade da oferta");
+              }}
               onEditarOferta={async (campos) => {
                 setProjetos((ps) =>
                   ps.map((p) => (p.id === projeto.id ? { ...p, ...campos } : p))
@@ -440,10 +444,9 @@ export default function App() {
           ) : (
             <>
               {secao === "home" && (
-                <HomeGeral
-                  projetos={projetos}
-                  onAbrir={abrirProjeto}
-                  onSetImagem={setImagem}
+                <Placar
+                  onAbrirProjeto={abrirProjeto}
+                  onNovaOferta={() => setNovoOpen(true)}
                 />
               )}
               {secao === "projetos" && (
@@ -470,15 +473,6 @@ export default function App() {
                   }}
                 />
               )}
-              {secao === "calendario" && (
-                <CalendarioGeral
-                  tarefas={tarefas}
-                  reunioes={reunioes}
-                  userById={userById}
-                  projById={projById}
-                  usuarios={usuarios}
-                />
-              )}
               {secao === "tarefas" && (
                 <TarefasGerais
                   tarefas={tarefas}
@@ -490,9 +484,6 @@ export default function App() {
                   onCriar={criarTarefa}
                   onToggle={toggleTarefa}
                 />
-              )}
-              {secao === "reunioes" && (
-                <Reunioes reunioes={reunioes} userById={userById} />
               )}
             </>
           )}

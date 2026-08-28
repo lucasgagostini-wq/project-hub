@@ -2,20 +2,16 @@ import React from "react";
 import {
   IconHome as Home,
   IconLayoutKanban as FolderKanban,
-  IconCalendar as CalendarDays,
   IconListCheck as ListTodo,
-  IconUsers as Users2,
   IconBulb as Bulb,
 } from "../../lib/icons";
 import { T } from "../../lib/theme";
 
 const NAV_ITENS = [
-  { id: "home",       label: "Início",    icon: Home },
-  { id: "projetos",   label: "Projetos",  icon: FolderKanban },
-  { id: "ideias",     label: "Ideias",    icon: Bulb },
-  { id: "calendario", label: "Agenda",    icon: CalendarDays },
-  { id: "tarefas",    label: "Tarefas",   icon: ListTodo },
-  { id: "reunioes",   label: "Reuniões",  icon: Users2 },
+  { id: "home",     label: "Placar",  icon: Home },
+  { id: "projetos", label: "Ofertas", icon: FolderKanban },
+  { id: "ideias",   label: "Ideias",  icon: Bulb },
+  { id: "tarefas",  label: "Tarefas", icon: ListTodo },
 ];
 
 export default function MobileBottomNav({ secao, onNav }) {
