@@ -58,12 +58,47 @@ on conflict (slug) where slug is not null do update set
 -- As vendas entraram todas no mesmo projeto (o funil manda um HUB_SYNC_PROJECT_ID
 -- só), mas cada uma carrega a sua oferta em `src`. Isto devolve cada venda pra
 -- sua dona. Vendas sem `src` (as antigas) ficam onde estão — não há como saber.
+--
+-- 🪤 O TRIGGER PRECISA SAIR DO CAMINHO. `trg_sales_recompute` é AFTER UPDATE
+-- FOR EACH ROW e, por linha, roda três agregações sobre a `sales` inteira. Num
+-- update de milhares de vendas isso vira dezenas de milhares de varreduras e o
+-- SQL Editor estoura por timeout (medido em 28/08/2026). Desligamos, atualizamos
+-- em bloco e recalculamos UMA vez — o resultado final é idêntico.
+-- ⚠️ O disable pega lock exclusivo na `sales`: venda que chegar nesses segundos
+-- espera, não se perde. Rodar fora do pico mesmo assim.
+begin;
+
+alter table sales disable trigger trg_sales_recompute;
+
 update sales s
    set project_id = p.id
   from projects p
  where p.slug is not null
    and lower(trim(s.src)) = p.slug
    and s.project_id is distinct from p.id;
+
+alter table sales enable trigger trg_sales_recompute;
+
+commit;
+
+-- ── Refaz à mão o que o trigger faria ───────────────────────────────────────
+-- Uma passada por projeto, em vez de uma por venda.
+update projects p set
+  faturamento = coalesce((select sum(amount)     from sales where project_id = p.id and status = 'paid'), 0),
+  lucro       = coalesce((select sum(net_amount) from sales where project_id = p.id and status = 'paid'), 0);
+
+-- Snapshots diários de receita (os que o trigger grava com source='cakto').
+-- Como venda mudou de dono, os antigos ficaram apontando pro projeto errado.
+delete from metric_snapshots where source = 'cakto';
+
+insert into metric_snapshots (project_id, date, revenue, net_profit, source)
+select project_id, paid_at::date, sum(amount), sum(net_amount), 'cakto'
+  from sales
+ where status = 'paid' and paid_at is not null and project_id is not null
+ group by project_id, paid_at::date
+on conflict (project_id, date, source) do update set
+  revenue    = excluded.revenue,
+  net_profit = excluded.net_profit;
 
 -- ── Confere o resultado ─────────────────────────────────────────────────────
 select p.name,
